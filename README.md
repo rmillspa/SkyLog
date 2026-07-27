@@ -2,6 +2,8 @@
 
 A privacy-first, self-hosted digital flight logbook for pilots. Track flights, maintain currency, and manage your aviation records — all on your own infrastructure.
 
+![Dashboard Dark](screenshots/dashboard-darkmode.png)
+
 > **⚠️ AI-Generated Code** — This app was almost entirely coded with the use of AI. I (the creator) unfortunately don't have the time to learn in-depth coding as I have a full-time job and family. Use at your own risk, but please help make the app better with commits!
 >
 > **⭐ Like SkyLog?** Give it a star to help get more involvement in its development!
@@ -16,6 +18,21 @@ A privacy-first, self-hosted digital flight logbook for pilots. Track flights, m
 - **⚙️ Settings** — Customize page visibility, column visibility per user, change username/password, toggle multi-user mode, import/export flights as CSV, and wipe/import flight data. Reset all settings to defaults.
 - **🔒 Self-Hosted** — Full data ownership. Single-user mode (auto-login) or multi-user mode with authentication.
 - **🌙 Dark Mode** — Select light, dark, or follow system color scheme preferences.
+
+## Screenshots
+
+| | |
+|---|---|
+| **Dashboard (Dark Mode)** | **Dashboard (Light Mode)** |
+| ![Dashboard Dark](screenshots/dashboard-darkmode.png) | ![Dashboard Light](screenshots/dashboard-lightmode.png) |
+| **Logbook** | **Log a New Flight** |
+| ![Logbook](screenshots/logbook-darkmode.png) | ![New Flight](screenshots/log-a-new-flight-darkmode.png) |
+| **Time Category Toggles** | **Save Attachments** |
+| ![Time Categories](screenshots/time-category-toggles-darkmode.png) | ![Attachments](screenshots/save-attachments-darkmode.png) |
+| **Currency Tracker** | **FAA 8710 Summary** |
+| ![Currency](screenshots/currency-darkmode.png) | ![FAA 8710](screenshots/FAA8710-darkmode.png) |
+| **Settings** | **Login Screen** |
+| ![Settings](screenshots/settings-darkmode.png) | ![Login](screenshots/login-screen-darkmode.png) |
 
 ## Tech Stack
 
