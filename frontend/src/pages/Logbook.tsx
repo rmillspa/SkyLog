@@ -612,7 +612,7 @@ export default function Logbook() {
               </svg>
             </button>
             {showSortMenu && (
-              <div className="absolute left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 dark:bg-zinc-800 dark:border-zinc-400">
+              <div className="absolute left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 dark:bg-zinc-800 dark:border-zinc-400">
                 <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">
                   Sort by
                 </div>
@@ -711,7 +711,7 @@ export default function Logbook() {
               )}
             </button>
             {showFilterMenu && (
-              <div className="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 dark:bg-zinc-800 dark:border-zinc-400">
+              <div className="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 dark:bg-zinc-800 dark:border-zinc-400">
                 <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Filter by</div>
                 <div className="max-h-64 overflow-y-auto">
                   {availableFilterOptions.map((opt) => (
