@@ -868,7 +868,7 @@ export default function Settings() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl mx-auto animate-fade-in dark:bg-zinc-800">
+    <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in dark:bg-zinc-800">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Settings</h1>
 
       {/* ── Theme (always expanded) ──────────────────────────────────────────── */}

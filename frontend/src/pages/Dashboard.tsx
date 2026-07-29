@@ -375,7 +375,7 @@ export default function Dashboard() {
   // ── Loading state (skeleton) ──
   if (!layoutLoaded || !stats) {
     return (
-      <div className="p-4 sm:p-8 max-w-6xl mx-auto animate-fade-in">
+      <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
             Dashboard
@@ -399,7 +399,7 @@ export default function Dashboard() {
   // ── Empty state (no flights logged yet) ──
   if (stats.total_flights === 0) {
     return (
-      <div className="p-4 sm:p-8 max-w-6xl mx-auto animate-fade-in dark:bg-zinc-800">
+      <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in dark:bg-zinc-800">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 dark:text-white">
           Dashboard
         </h1>
@@ -429,7 +429,7 @@ export default function Dashboard() {
   const sortedTiles = layout.slice().sort((a, b) => a.order - b.order);
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl mx-auto animate-fade-in dark:bg-zinc-800">
+    <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in dark:bg-zinc-800">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
@@ -481,7 +481,7 @@ export default function Dashboard() {
           ═══════════════════════════════════════════ */}
       <div
         ref={gridRef}
-        className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8 dark:text-white dark:bg-zinc-800 dark:border-zinc-300"
+        className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3 sm:gap-4 mb-6 sm:mb-8 dark:text-white dark:bg-zinc-800 dark:border-zinc-300"
       >
         {sortedTiles.map((tile, idx) => {
           const def = TILE_REGISTRY[tile.type];

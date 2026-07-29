@@ -290,7 +290,7 @@ export default function App() {
           Navigation Header (non-scrollable)
           ════════════════════════════════════════ */}
       <header className="bg-white shadow-sm border-b border-gray-200 shrink-0 relative dark:bg-zinc-900 dark:border-zinc-400">
-        <div className="max-w-6xl mx-auto px-2 sm:px-6">
+        <div className="w-[95%] mx-auto px-2 sm:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16">
             {/* Logo — hide text on smallest screens */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
