@@ -553,7 +553,7 @@ export default function FAA8710() {
   // ── Loading state ──
   if (!loaded) {
     return (
-      <div className="p-4 sm:p-8 max-w-7xl mx-auto animate-fade-in">
+      <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in">
         {/* Title — always visible */}
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6">
           FAA 8710 — Aeronautical Experience
@@ -622,7 +622,7 @@ export default function FAA8710() {
 
   // ── Main render ──
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in">
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6">
         FAA 8710 — Aeronautical Experience
       </h1>

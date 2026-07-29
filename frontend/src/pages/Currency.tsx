@@ -521,7 +521,7 @@ export default function Currency() {
   // ── Loading state ──
   if (!thresholdsLoaded || !flightsLoaded) {
     return (
-      <div className="p-4 sm:p-8 max-w-6xl mx-auto animate-fade-in">
+      <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in">
         {/* Title — always visible */}
         <div className="flex items-center justify-between mb-4 sm:mb-8">
           <div>
@@ -624,7 +624,7 @@ export default function Currency() {
   }
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in">
       {/* ═══ Header ═══ */}
       <div className="flex items-center justify-between mb-4 sm:mb-8">
         <div>

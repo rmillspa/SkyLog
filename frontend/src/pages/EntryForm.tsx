@@ -458,7 +458,7 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
   // ═══ Loading state (fetching flight for edit) ═══
   if (loadingFlight) {
     return (
-      <div className="p-4 sm:p-8 max-w-2xl mx-auto animate-fade-in">
+      <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 dark:text-white">Edit Flight</h1>
         <div className="space-y-4">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -485,14 +485,14 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
 
   // ═══ Render the form ═══
   return (
-    <div className="p-4 sm:p-8 max-w-2xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in">
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 dark:text-white">
         {isEditMode ? "Edit Flight" : "Log a New Flight"}
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* 2-column grid of fields — each field is conditionally rendered
-            based on columnVisibility */}        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0 max-w-full">
+        {/* Dynamic grid of fields — column count adapts to screen width
+            based on columnVisibility */}        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 min-w-0 max-w-full">
           {isFieldVisible("date") && (
             <Field
               label="Date"
