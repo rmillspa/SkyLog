@@ -54,6 +54,7 @@ Create a `docker-compose.yml` file:
 services:
   skylog:
     image: ghcr.io/rylins-builds/skylog:latest
+    restart: unless-stopped
     container_name: skylog
     ports:
       - "3000:3000"
