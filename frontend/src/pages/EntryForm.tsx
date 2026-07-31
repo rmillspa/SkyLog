@@ -620,6 +620,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.sel_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("sel_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("sesTime") && (
@@ -633,6 +635,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.ses_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("ses_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("melTime") && (
@@ -646,6 +650,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.mel_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("mel_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("mesTime") && (
@@ -659,6 +665,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.mes_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("mes_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("helicopterTime") && (
@@ -672,6 +680,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.helicopter_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("helicopter_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("gyroplaneTime") && (
@@ -685,6 +695,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.gyroplane_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("gyroplane_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("poweredLiftTime") && (
@@ -698,6 +710,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.powered_lift_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("powered_lift_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("gliderTime") && (
@@ -711,6 +725,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.glider_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("glider_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("balloonTime") && (
@@ -724,6 +740,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.balloon_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("balloon_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("airshipTime") && (
@@ -737,6 +755,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.airship_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("airship_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("soloTime") && (
@@ -750,6 +770,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.solo_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("solo_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("picTime") && (
@@ -763,6 +785,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.pic_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("pic_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("sicTime") && (
@@ -776,6 +800,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.sic_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("sic_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("dualTime") && (
@@ -789,6 +815,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.dual_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("dual_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("instructorTime") && (
@@ -802,6 +830,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.instructor_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("instructor_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("xcountryTime") && (
@@ -815,6 +845,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.xcountry_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("xcountry_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("nightTime") && (
@@ -828,6 +860,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.night_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("night_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("actInstrumentTime") && (
@@ -841,6 +875,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.act_instrument_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("act_instrument_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("simInstrumentTime") && (
@@ -854,6 +890,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.sim_instrument_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("sim_instrument_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("fullFlightSimulatorTime") && (
@@ -867,6 +905,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.full_flight_simulator_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("full_flight_simulator_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("flightTrainingDeviceTime") && (
@@ -880,6 +920,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.flight_training_device_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("flight_training_device_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("aviationTrainingDeviceTime") && (
@@ -893,6 +935,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.aviation_training_device_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("aviation_training_device_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("takeoffsDay") && (
@@ -1128,6 +1172,7 @@ function Field({
   error,
   list,
   onCopyTotalTime,
+  totalTimeValue,
 }: {
   label: string;
   name: string;
@@ -1145,6 +1190,8 @@ function Field({
   /** When provided, renders a "copy from Total Time" button to the right of
    *  the stepper. Used by hour-based time fields. */
   onCopyTotalTime?: () => void;
+  /** The current Total Time value — displayed as the copy button's label. */
+  totalTimeValue?: string;
 }) {
   /** Numeric fields get custom on-page − / + buttons instead of the native
    *  browser spinner arrows. */
@@ -1219,9 +1266,9 @@ function Field({
               aria-label={`Copy Total Time to ${label}`}
               title="Use the Total Time value for this field"
               className="shrink-0 h-9 px-2.5 rounded-lg border border-blue-300 bg-blue-50 text-blue-700 text-xs font-semibold leading-none whitespace-nowrap hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900 dark:hover:text-blue-200"
-            >
-              ⧉ Copy Total
-            </button>
+          >
+            {totalTimeValue}
+          </button>
           )}
         </div>
       ) : (
