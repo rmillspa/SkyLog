@@ -13,14 +13,15 @@
  *   4. **Visibility** — Loads page visibility settings from the backend
  *      API and hides optional nav buttons when toggled off.
  *
- * State is managed with React hooks (useState, useEffect) rather than
- * a router library — the app has only a handful of "pages" and no
- * URL-based routing is needed for this self-hosted single-user SPA.
+ * Page changes are synced to the browser URL via a small hand-rolled
+ * router (src/router.ts), so the browser's Back/Forward buttons, deep
+ * links, and page refreshes all work without pulling in a router
+ * dependency.
  *
  * @module App
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Dashboard from "./pages/Dashboard";
 import Logbook from "./pages/Logbook";
 import Currency from "./pages/Currency";
@@ -30,15 +31,16 @@ import EntryForm from "./pages/EntryForm";
 import LoginPage from "./pages/LoginPage";
 import { loadSettings, loadVisibilityFromApi, type PageVisibility, CORE_PAGES } from "./api/settings";
 import { api } from "./api/client";
-
-/** The set of top-level pages the user can navigate to. */
-type Page = "dashboard" | "logbook" | "currency" | "FAA8710" | "settings" | "add";
+import { parsePath, pageToPath, type Page } from "./router";
 
 export default function App() {
-  // ═══ Core State ═══
-  const [currentPage, setCurrentPage] = useState<Page>("dashboard");
+  // ═══ Core State (initialised from the current URL so deep links,
+  //      refreshes and Back/Forward restores work) ═══
+  const [currentPage, setCurrentPage] = useState<Page>(() => parsePath().page);
   /** If non-null, the id of the flight being edited in EntryForm. */
-  const [editingFlightId, setEditingFlightId] = useState<number | null>(null);
+  const [editingFlightId, setEditingFlightId] = useState<number | null>(
+    () => parsePath().editFlightId
+  );
   /** Which optional pages (currency, FAA8710) are visible in the nav. */
   const [pageVisibility, setPageVisibility] = useState<PageVisibility>(
     () => loadSettings().pageVisibility
@@ -52,14 +54,54 @@ export default function App() {
   const [authState, setAuthState] = useState<"loading" | "login" | "authenticated">("loading");
 
   // ═══════════════════════════════════════════════
+  // Navigation helper — keeps React state in sync with the browser URL
+  // ═══════════════════════════════════════════════
+
+  /**
+   * Navigate to a page, updating both React state and the browser history.
+   *
+   * - User-initiated navigations push a new history entry, so the Back
+   *   button retraces through the pages the user actually visited.
+   * - Defensive redirects (hidden page, unknown URL) use replace so they
+   *   don't pollute the history stack.
+   * - No-op when the target URL already matches, avoiding duplicate
+   *   history entries for re-clicking the active nav button.
+   */
+  const navigateTo = useCallback(
+    (page: Page, opts?: { editFlightId?: number | null; replace?: boolean }) => {
+      const editId = opts?.editFlightId ?? null;
+      setEditingFlightId(editId);
+      setCurrentPage(page);
+
+      const target = pageToPath(page, editId);
+      if (window.location.pathname === target) return;
+
+      try {
+        if (opts?.replace) {
+          window.history.replaceState(null, "", target);
+        } else {
+          window.history.pushState(null, "", target);
+        }
+      } catch {
+        // file:// or other restricted contexts — state still updates in-memory
+      }
+    },
+    [],
+  );
+
+  // ═══════════════════════════════════════════════
   // 1. Complete authentication — loads default page before showing UI
   // ═══════════════════════════════════════════════
 
   /**
    * Finalise authentication by loading the user's default page from the
-   * backend and then setting authState to "authenticated".  Because both
-   * setCurrentPage and setAuthState happen in the same synchronous batch
-   * after the await, React renders the authenticated UI once with the
+   * backend and then setting authState to "authenticated".
+   *
+   * The default-page preference only applies when the URL has no explicit
+   * page (root path) or is unrecognised — deep links like /logbook or
+   * /log/5/edit always win over the default, so refresh and bookmarking
+   * behave as expected. Both state updates happen in the same synchronous
+   * batch after the await, so the authenticated UI renders once with the
    * correct page — there is no flash of the dashboard first.
    */
   const completeAuth = async () => {
@@ -67,7 +109,10 @@ export default function App() {
       const { page } = await api.getDefaultPage();
       const validPages: Page[] = ["dashboard", "logbook", "currency", "FAA8710", "settings", "add"];
       if (validPages.includes(page as Page)) {
-        setCurrentPage(page as Page);
+        const current = parsePath();
+        if (!current.isKnown || (current.page === "dashboard" && current.editFlightId === null)) {
+          navigateTo(page as Page, { replace: true });
+        }
       }
     } catch {
       // Keep dashboard as default
@@ -120,6 +165,22 @@ export default function App() {
   }, []);
 
   // ═══════════════════════════════════════════════
+  // Browser Back/Forward — re-parse the URL on popstate
+  // ═══════════════════════════════════════════════
+  // pushState/replaceState never fire popstate (it only fires for Back,
+  // Forward and hash changes), so there is no feedback loop here.
+
+  useEffect(() => {
+    const handler = () => {
+      const route = parsePath();
+      setCurrentPage(route.page);
+      setEditingFlightId(route.editFlightId);
+    };
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, []);
+
+  // ═══════════════════════════════════════════════
   // 3. Load visibility settings after auth
   // ═══════════════════════════════════════════════
 
@@ -148,30 +209,11 @@ export default function App() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail === "add") {
-        setEditingFlightId(null);
-        setCurrentPage("add");
-      } else if (detail === "settings") {
-        setEditingFlightId(null);
-        setCurrentPage("settings");
-      } else if (detail === "FAA8710") {
-        setEditingFlightId(null);
-        setCurrentPage("FAA8710");
-      } else if (detail === "currency") {
-        setEditingFlightId(null);
-        setCurrentPage("currency");
-      } else if (detail === "logbook") {
-        setEditingFlightId(null);
-        setCurrentPage("logbook");
-      } else if (detail === "dashboard") {
-        setEditingFlightId(null);
-        setCurrentPage("dashboard");
-      }
+      navigateTo((e as CustomEvent).detail as Page);
     };
     window.addEventListener("navigate", handler);
     return () => window.removeEventListener("navigate", handler);
-  }, []);
+  }, [navigateTo]);
 
   // ═══════════════════════════════════════════════
   // 6. Listen for edit-flight events from Logbook
@@ -179,13 +221,11 @@ export default function App() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const flightId = (e as CustomEvent).detail as number;
-      setEditingFlightId(flightId);
-      setCurrentPage("add");
+      navigateTo("add", { editFlightId: (e as CustomEvent).detail as number });
     };
     window.addEventListener("edit-flight", handler);
     return () => window.removeEventListener("edit-flight", handler);
-  }, []);
+  }, [navigateTo]);
 
   // ═══════════════════════════════════════════════
   // 7. Re-auth when multi-user mode changes
@@ -219,9 +259,9 @@ export default function App() {
       !CORE_PAGES.includes(currentPage as typeof CORE_PAGES[number]) &&
       !pageVisibility[currentPage as keyof PageVisibility]
     ) {
-      setCurrentPage("dashboard");
+      navigateTo("dashboard", { replace: true });
     }
-  }, [pageVisibility, currentPage]);
+  }, [pageVisibility, currentPage, navigateTo]);
 
   // ═══════════════════════════════════════════════
   // Handlers
@@ -233,8 +273,10 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("skylog_token");
+    // Reset the URL so logging out leaves the address bar on the neutral
+    // root path (and Back from the login screen doesn't reopen a page URL).
+    navigateTo("dashboard", { replace: true });
     setAuthState("login");
-    setCurrentPage("dashboard");
   };
 
   // ═══════════════════════════════════════════════
@@ -304,10 +346,7 @@ export default function App() {
                 <NavButton
                   key={key}
                   active={currentPage === key}
-                  onClick={() => {
-                    setEditingFlightId(null);
-                    setCurrentPage(key);
-                  }}
+                  onClick={() => navigateTo(key)}
                   highlight={key === "add"}
                 >
                   {icon === "house" && (
