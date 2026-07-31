@@ -165,6 +165,20 @@ button, a, input, select, textarea, label {
   opacity: 1;
 }
 
+/* ── Number Stepper Inputs ── */
+/* Numeric form fields use custom on-page − / + buttons rendered by the
+   Field component in EntryForm. Hide the native browser spinner arrows
+   (which vary by OS/browser) so there is no duplicate control. */
+.stepper-input::-webkit-outer-spin-button,
+.stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.stepper-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* ── Primary Button ── */
 /* The "Log Flight" / "Save" primary action button.
    A subtle scale-down on active press gives tactile feedback. */

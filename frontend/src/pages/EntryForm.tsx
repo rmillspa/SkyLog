@@ -310,6 +310,20 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
     }
   };
 
+  // ═══ Copy Total Time into a specific time field ═══
+  /** True while a non-empty Total Time has been entered — enables the
+   *  per-field "copy from Total Time" buttons. */
+  const hasTotalTime = form.total_time.trim() !== "";
+
+  /** Copy the entered Total Time value into a specific time field. */
+  const copyTotalTimeTo = (targetField: string) => {
+    const total = form.total_time.trim();
+    if (total === "") return;
+    handleChange({
+      target: { name: targetField, value: total, type: "number" },
+    } as React.ChangeEvent<HTMLInputElement>);
+  };
+
   // ═══ Client-side validation ═══
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
@@ -606,6 +620,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.sel_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("sel_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("sesTime") && (
@@ -619,6 +635,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.ses_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("ses_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("melTime") && (
@@ -632,6 +650,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.mel_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("mel_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("mesTime") && (
@@ -645,6 +665,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.mes_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("mes_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("helicopterTime") && (
@@ -658,6 +680,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.helicopter_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("helicopter_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("gyroplaneTime") && (
@@ -671,6 +695,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.gyroplane_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("gyroplane_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("poweredLiftTime") && (
@@ -684,6 +710,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.powered_lift_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("powered_lift_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("gliderTime") && (
@@ -697,6 +725,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.glider_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("glider_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("balloonTime") && (
@@ -710,6 +740,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.balloon_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("balloon_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("airshipTime") && (
@@ -723,52 +755,9 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.airship_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("airship_time") : undefined}
+              totalTimeValue={form.total_time}
             />
-          )}
-          {/* Launch Type — only shown when glider/balloon/airship time > 0.
-              Appears right after the field that triggered it. */}
-          {needsLaunchType && (
-            <div className="min-w-0 max-w-full overflow-hidden sm:col-span-2">
-              {/* Prominent banner when launch type is required but not set */}
-              {needsLaunchType && !form.launch_type.trim() && (
-                <div className="bg-amber-50 border border-amber-300 text-amber-800 px-3 py-2 rounded-lg mb-2 text-sm font-medium flex items-center gap-2">
-                  <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>
-                    Launch type is required for glider or lighter-than-air flights.
-                  </span>
-                </div>
-              )}
-              <label htmlFor="launch_type" className="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
-                Launch Type {needsLaunchType && <span className="text-red-500">*</span>}
-                {needsLaunchType && <span className="text-xs text-red-400 ml-1">(required)</span>}
-              </label>
-              <select
-                id="launch_type"
-                name="launch_type"
-                value={form.launch_type}
-                onChange={handleChange}
-                className={`w-full min-w-0 max-w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors dark:bg-zinc-800 dark:text-white dark:border-zinc-400 ${
-                  errors.launch_type
-                    ? "border-red-400 focus:ring-red-500"
-                    : needsLaunchType
-                    ? "border-amber-400 focus:ring-amber-500"
-                    : "border-gray-300 focus:ring-blue-500"
-                }`}
-              >
-                <option value="">Select launch type...</option>
-                <option value="aero_tow">Aero-Tow</option>
-                <option value="ground_launch">Ground Launch</option>
-                <option value="powered_launch">Powered Launch</option>
-              </select>
-              {errors.launch_type && <p className="text-xs text-red-500 mt-1">{errors.launch_type}</p>}
-              {!errors.launch_type && needsLaunchType && !form.launch_type.trim() && (
-                <p className="text-xs text-amber-600 mt-1">
-                  This flight involves a glider or lighter-than-air aircraft. Select a launch method to continue.
-                </p>
-              )}
-            </div>
           )}
           {isFieldVisible("soloTime") && (
             <Field
@@ -781,6 +770,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.solo_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("solo_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("picTime") && (
@@ -794,6 +785,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.pic_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("pic_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("sicTime") && (
@@ -807,6 +800,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.sic_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("sic_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("dualTime") && (
@@ -820,6 +815,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.dual_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("dual_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("instructorTime") && (
@@ -833,6 +830,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.instructor_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("instructor_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("xcountryTime") && (
@@ -846,6 +845,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.xcountry_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("xcountry_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("nightTime") && (
@@ -859,6 +860,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.night_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("night_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("actInstrumentTime") && (
@@ -872,6 +875,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.act_instrument_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("act_instrument_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("simInstrumentTime") && (
@@ -885,6 +890,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.sim_instrument_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("sim_instrument_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("fullFlightSimulatorTime") && (
@@ -898,6 +905,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.full_flight_simulator_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("full_flight_simulator_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("flightTrainingDeviceTime") && (
@@ -911,6 +920,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.flight_training_device_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("flight_training_device_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("aviationTrainingDeviceTime") && (
@@ -924,6 +935,8 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
               onChange={handleChange}
               placeholder="0"
               error={errors.aviation_training_device_time}
+              onCopyTotalTime={hasTotalTime ? () => copyTotalTimeTo("aviation_training_device_time") : undefined}
+              totalTimeValue={form.total_time}
             />
           )}
           {isFieldVisible("takeoffsDay") && (
@@ -1038,6 +1051,51 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
           clearStaged={clearStaged}
         />
 
+        {/* Launch Type — only shown when glider/balloon/airship time > 0.
+            Placed near the end of the form, between attachments and the
+            submit button, so the main flight-time grid stays uncluttered. */}
+        {needsLaunchType && (
+          <div className="min-w-0 max-w-full overflow-hidden">
+            {/* Prominent banner when launch type is required but not set */}
+            {!form.launch_type.trim() && (
+              <div className="bg-amber-50 border border-amber-300 text-amber-800 px-3 py-2 rounded-lg mb-2 text-sm font-medium flex items-center gap-2">
+                <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  Launch type is required for glider or lighter-than-air flights.
+                </span>
+              </div>
+            )}
+            <label htmlFor="launch_type" className="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
+              Launch Type <span className="text-red-500">*</span>
+              <span className="text-xs text-red-400 ml-1">(required)</span>
+            </label>
+            <select
+              id="launch_type"
+              name="launch_type"
+              value={form.launch_type}
+              onChange={handleChange}
+              className={`w-full min-w-0 max-w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors dark:bg-zinc-800 dark:text-white dark:border-zinc-400 ${
+                errors.launch_type
+                  ? "border-red-400 focus:ring-red-500"
+                  : "border-amber-400 focus:ring-amber-500"
+              }`}
+            >
+              <option value="">Select launch type...</option>
+              <option value="aero_tow">Aero-Tow</option>
+              <option value="ground_launch">Ground Launch</option>
+              <option value="powered_launch">Powered Launch</option>
+            </select>
+            {errors.launch_type && <p className="text-xs text-red-500 mt-1">{errors.launch_type}</p>}
+            {!errors.launch_type && !form.launch_type.trim() && (
+              <p className="text-xs text-amber-600 mt-1">
+                This flight involves a glider or lighter-than-air aircraft. Select a launch method to continue.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Success/Error message banner */}
         {message && (
           <div
@@ -1113,6 +1171,8 @@ function Field({
   pattern,
   error,
   list,
+  onCopyTotalTime,
+  totalTimeValue,
 }: {
   label: string;
   name: string;
@@ -1127,30 +1187,110 @@ function Field({
   error?: string;
   /** ID of a <datalist> element to attach for autocomplete suggestions. */
   list?: string;
+  /** When provided, renders a "copy from Total Time" button to the right of
+   *  the stepper. Used by hour-based time fields. */
+  onCopyTotalTime?: () => void;
+  /** The current Total Time value — displayed as the copy button's label. */
+  totalTimeValue?: string;
 }) {
+  /** Numeric fields get custom on-page − / + buttons instead of the native
+   *  browser spinner arrows. */
+  const isStepper = type === "number";
+
+  /**
+   * Increase (direction = 1) or decrease (direction = -1) the field value
+   * by the input's "step" (default 1). Emits a synthetic change event so the
+   * parent's handleChange runs normally — clearing field errors and tracking
+   * manual edits to total_time. Values are rounded to 2 decimals to avoid
+   * floating-point drift (e.g. 2.3 + 0.1 → 2.4). */
+  const stepValue = (direction: 1 | -1) => {
+    const current = value.trim() === "" ? 0 : parseFloat(value) || 0;
+    const parsedStep = parseFloat(step || "1") || 1;
+    let next = Math.round((current + direction * parsedStep) * 100) / 100;
+    const minValue = parseFloat(min ?? "");
+    if (!isNaN(minValue) && next < minValue) {
+      next = minValue;
+    }
+    onChange({
+      target: { name, value: String(next), type },
+    } as React.ChangeEvent<HTMLInputElement>);
+  };
+
   return (
     <div className="min-w-0 max-w-full overflow-hidden">
       <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1 dark:text-white">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
-      <input
-        id={name}
-        name={name}
-        type={type}
-        value={value}
-        onChange={onChange}
-        required={required}
-        step={step}
-        min={min}
-        placeholder={placeholder}
-        pattern={pattern}
-        list={list}
-        className={`w-full min-w-0 max-w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors placeholder:text-gray-400 dark:bg-zinc-800 dark:text-white dark:placeholder:text-gray-500 dark:border-zinc-400 ${
-          error
-            ? "border-red-400 focus:ring-red-500 dark:border-red-500"
-            : "border-gray-300 focus:ring-blue-500"
-        }`}
-      />
+      {isStepper ? (
+        <div className="flex items-center gap-1.5 w-full min-w-0 max-w-full">
+          <button
+            type="button"
+            onClick={() => stepValue(-1)}
+            aria-label={`Decrease ${label}`}
+            title={`Decrease ${label}`}
+            className="shrink-0 w-9 h-9 rounded-lg border border-gray-300 bg-gray-50 text-gray-600 text-lg font-semibold leading-none hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors dark:bg-zinc-700 dark:text-white dark:border-zinc-400 dark:hover:bg-zinc-600"
+          >
+            −
+          </button>
+          <input
+            id={name}
+            name={name}
+            type={type}
+            value={value}
+            onChange={onChange}
+            required={required}
+            step={step}
+            min={min}
+            placeholder={placeholder}
+            pattern={pattern}
+            list={list}
+            className={`stepper-input flex-1 min-w-0 rounded-lg border px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 transition-colors placeholder:text-gray-400 dark:bg-zinc-800 dark:text-white dark:placeholder:text-gray-500 dark:border-zinc-400 ${
+              error
+                ? "border-red-400 focus:ring-red-500 dark:border-red-500"
+                : "border-gray-300 focus:ring-blue-500"
+            }`}
+          />
+          <button
+            type="button"
+            onClick={() => stepValue(1)}
+            aria-label={`Increase ${label}`}
+            title={`Increase ${label}`}
+            className="shrink-0 w-9 h-9 rounded-lg border border-gray-300 bg-gray-50 text-gray-600 text-lg font-semibold leading-none hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors dark:bg-zinc-700 dark:text-white dark:border-zinc-400 dark:hover:bg-zinc-600"
+          >
+            +
+          </button>
+          {onCopyTotalTime && (
+            <button
+              type="button"
+              onClick={onCopyTotalTime}
+              aria-label={`Copy Total Time to ${label}`}
+              title="Use the Total Time value for this field"
+              className="shrink-0 h-9 px-2.5 rounded-lg border border-blue-300 bg-blue-50 text-blue-700 text-xs font-semibold leading-none whitespace-nowrap hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900 dark:hover:text-blue-200"
+          >
+            {totalTimeValue}
+          </button>
+          )}
+        </div>
+      ) : (
+        <input
+          id={name}
+          name={name}
+          type={type}
+          value={value}
+          onChange={onChange}
+          required={required}
+          step={step}
+          min={min}
+          placeholder={placeholder}
+          pattern={pattern}
+          list={list}
+          className={`w-full min-w-0 max-w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors placeholder:text-gray-400 dark:bg-zinc-800 dark:text-white dark:placeholder:text-gray-500 dark:border-zinc-400 ${
+            error
+              ? "border-red-400 focus:ring-red-500 dark:border-red-500"
+              : "border-gray-300 focus:ring-blue-500"
+          }`}
+        />
+      )}
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );
