@@ -20,7 +20,7 @@ import { StatTile } from "../dashboard/tiles/StatTile";
 import { RecentFlightsTile } from "../dashboard/tiles/RecentFlightsTile";
 import { AircraftTypeStatsTile } from "../dashboard/tiles/AircraftTypeStatsTile";
 import { DashboardCustomizer } from "../dashboard/DashboardCustomizer";
-import { loadSettings, loadRecentFlightsColumnsFromApi, loadDashboardSectionsFromApi } from "../api/settings";
+import { loadSettings, loadRecentFlightsColumnsFromApi, loadDashboardSectionsFromApi, loadDashboardLayoutFromApi } from "../api/settings";
 import type { ColumnVisibility, RecentFlightsColumns, DashboardSections } from "../api/settings";
 import type { AircraftTypeStat } from "../api/types";
 
@@ -193,9 +193,31 @@ export default function Dashboard() {
 
   // ── Listen for settings changes and sync layout ──
   useEffect(() => {
-    const handler = (e: CustomEvent<{ columnVisibility?: ColumnVisibility }>) => {
+    const handler = (e: CustomEvent<{ columnVisibility?: ColumnVisibility; settingsReset?: boolean }>) => {
       if (isSyncingRef.current) return;
       isSyncingRef.current = true;
+
+      // A settings reset wiped the backend + localStorage back to defaults,
+      // so reload the stat-tile layout from the server (which now returns
+      // the default tile set) instead of trying to sync the stale layout.
+      if (e.detail?.settingsReset) {
+        loadDashboardLayoutFromApi().then((fresh) => {
+          const hiddenSet = getHiddenTileTypes();
+          const synced = syncLayoutWithHiddenTiles(fresh, hiddenSet);
+          setLayout(synced);
+          isSyncingRef.current = false;
+        });
+        // Update Recent Flights column preferences
+        setRecentFlightsColumns(loadSettings().recentFlightsColumns);
+
+        // Update Dashboard section visibility preferences
+        const sections = loadSettings().dashboardSections;
+        setDashboardSections(sections);
+
+        // Update column visibility state so the aircraft type stats tile reacts
+        setColumnVisibility(loadSettings().columnVisibility);
+        return;
+      }
 
       // Update column visibility state so the aircraft type stats tile reacts
       if (e.detail?.columnVisibility) {

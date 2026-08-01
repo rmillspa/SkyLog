@@ -37,9 +37,10 @@ import {
   loadRecentFlightsColumnsFromApi,
   loadDashboardSectionsFromApi,
   saveDashboardSectionsToApi,
+  getDefaultDashboardLayout,
   loadSettings as loadSettingsFromStorage,
 } from "../api/settings";
-import { type ThemeMode, getThemeMode, setThemeMode } from "../api/theme";
+import { type ThemeMode, getThemeMode, setThemeMode, clearThemeMode } from "../api/theme";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -285,6 +286,11 @@ export default function Settings() {
       await api.resetSettings();
       // Clear localStorage
       localStorage.removeItem("flightLogbookSettings");
+      // Reset theme to the system default and re-apply it to the DOM
+      clearThemeMode();
+      setThemeModeState("system");
+      // Reset the default landing page back to Dashboard
+      setDefaultPage("dashboard");
       // Reset local state to defaults
       const defaults = loadSettingsFromStorage();
       setSettings(prev => ({
@@ -298,8 +304,18 @@ export default function Settings() {
       await saveVisibilityToApi(defaults.pageVisibility, defaults.columnVisibility);
       await saveRecentFlightsColumnsToApi(defaults.recentFlightsColumns);
       await saveDashboardSectionsToApi(defaults.dashboardSections);
-      // Notify other components
-      window.dispatchEvent(new CustomEvent("settingsUpdated", { detail: defaults }));
+      // Reset the dashboard stat-tile layout to its default tile set so
+      // custom layouts added via the dashboard customizer are cleared too.
+      await api.saveDashboardLayout(getDefaultDashboardLayout());
+      // Persist the default landing page (Dashboard) to the backend so the
+      // reset survives cache clears and carries across devices.
+      await api.saveDefaultPage("dashboard");
+      // Notify other components. The settingsReset flag tells mounted pages
+      // (e.g. Dashboard) to reload their server-persisted state, since both
+      // the backend and localStorage have been wiped back to defaults.
+      window.dispatchEvent(new CustomEvent("settingsUpdated", {
+        detail: { ...defaults, settingsReset: true },
+      }));
       setResetSettingsStep(2);
       setSuccess("All settings have been reset to defaults.");
       setTimeout(() => setSuccess(""), 5000);
@@ -1280,7 +1296,7 @@ export default function Settings() {
         </p>
 
         {/* ── Display Sections ──────────────────────────────────────────────── */}
-        <div className="mb-6">
+        <div className="mb-6 rounded-xl border border-gray-200 dark:border-zinc-400 bg-gray-50 dark:bg-zinc-800/50 p-4 sm:p-5">
           <h3 className="text-base font-medium text-gray-700 dark:text-gray-300 mb-1">
             Display Sections
           </h3>
@@ -1329,7 +1345,7 @@ export default function Settings() {
         </div>
 
         {/* ── Recent Flights Columns ──────────────────────────────────────────── */}
-        <div>
+        <div className="rounded-xl border border-gray-200 dark:border-zinc-400 bg-gray-50 dark:bg-zinc-800/50 p-4 sm:p-5">
           <h3 className="text-base font-medium text-gray-700 dark:text-gray-300 mb-1">
             Recent Flights Columns
           </h3>
@@ -1607,7 +1623,7 @@ export default function Settings() {
       {/* ── Reset Settings ───────────────────────────────────────────────── */}
       <CollapsibleSection title="Reset Settings" alwaysOpen>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Restore all page visibility, column visibility, and currency threshold settings to their factory defaults.
+          Restore all settings (theme, default page, page visibility, column visibility, currency thresholds, and dashboard settings) to their factory defaults.
           Your flight data, account, and password will not be affected.
         </p>
 
@@ -1618,7 +1634,7 @@ export default function Settings() {
                 <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                This will reset your page visibility, column visibility, and currency thresholds to their original defaults.
+                This will reset your page visibility, column visibility, currency thresholds, and dashboard settings to their original defaults.
               </p>
             </div>
             <button
@@ -1640,7 +1656,7 @@ export default function Settings() {
                 Are you sure?
               </p>
               <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
-                This will restore defaults for page visibility, column visibility, and currency thresholds.
+                This will restore defaults for page visibility, column visibility, currency thresholds, and dashboard settings.
                 Your flight records, username, and password will remain unchanged.
               </p>
             </div>

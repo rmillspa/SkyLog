@@ -21,6 +21,8 @@
  */
 
 import { api } from "./client";
+import { getDefaultLayout } from "../dashboard/tileRegistry";
+import type { DashboardTileConfig } from "../dashboard/types";
 
 // ═════════════════════════════════════════════════
 // Types
@@ -202,6 +204,19 @@ export const DEFAULT_DASHBOARD_SECTIONS: DashboardSections = {
   recentFlights: true,
   aircraftTotals: true,
 };
+
+/**
+ * Default dashboard stat-tile layout (which tiles are enabled, their
+ * widths and order). Delegates to the tile registry so it always matches
+ * the tiles marked `enabledByDefault` — the same source the backend uses
+ * when no saved layout exists.
+ *
+ * Used by the dashboard customizer and by Settings when resetting all
+ * settings to defaults.
+ */
+export function getDefaultDashboardLayout(): DashboardTileConfig[] {
+  return getDefaultLayout();
+}
 
 /**
  * Default: the original compact Recent Flights set is visible.
@@ -566,6 +581,23 @@ export async function saveDashboardSectionsToApi(sections: DashboardSections): P
     await api.saveDashboardSections(sections);
   } catch {
     console.warn("Failed to save dashboard sections to backend, localStorage fallback is in use");
+  }
+}
+
+// ═════════════════════════════════════════════════
+// Dashboard stat-tile layout helpers
+// ═════════════════════════════════════════════════
+
+/**
+ * Load the user's dashboard stat-tile layout from the backend API,
+ * falling back to the default registry layout if the API call fails.
+ */
+export async function loadDashboardLayoutFromApi(): Promise<DashboardTileConfig[]> {
+  try {
+    const res = await api.getDashboardLayout();
+    return (res.layout ?? []) as DashboardTileConfig[];
+  } catch {
+    return getDefaultDashboardLayout();
   }
 }
 

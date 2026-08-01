@@ -680,6 +680,9 @@ func resetSettings(db *sql.DB) http.HandlerFunc {
 		// Delete Dashboard section visibility preference
 		_, _ = db.ExecContext(r.Context(),
 			"DELETE FROM settings WHERE key = ?", dashboardSectionsKey(userID))
+		// Delete default page preference (falls back to "dashboard" on read)
+		_, _ = db.ExecContext(r.Context(),
+			"DELETE FROM settings WHERE key = ?", fmt.Sprintf("default_page_%d", userID))
 
 		writeJSON(w, 200, map[string]string{"status": "ok"})
 	}
