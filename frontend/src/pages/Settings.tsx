@@ -1215,25 +1215,29 @@ export default function Settings() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {group.columns.map(({ key, label }) => {
                 const columnKey = key as keyof ColumnVisibility;
+                const isVisible = settings.columnVisibility[columnKey];
                 return (
-                  <div key={key} className="flex items-center space-x-2">
-                    {/* Custom checkbox */}
-                    <button
-                      onClick={() => toggleColumnVisibility(columnKey)}
-                      className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                        settings.columnVisibility[columnKey]
-                          ? "bg-blue-600 border-blue-600"
-                          : "border-gray-400 dark:border-gray-500"
+                  <button
+                    key={key}
+                    onClick={() => toggleColumnVisibility(columnKey)}
+                    aria-pressed={isVisible}
+                    className={`flex items-center justify-between gap-2 w-full p-3 rounded-lg border-2 transition-colors text-left ${
+                      isVisible
+                        ? "bg-blue-50 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400"
+                        : "bg-gray-50 border-gray-200 hover:bg-gray-100 dark:bg-zinc-800 dark:border-zinc-400 dark:hover:bg-zinc-700"
+                    }`}
+                  >
+                    <span className="text-sm font-medium text-gray-900 dark:text-white min-w-0">{label}</span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                        isVisible
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-300 text-gray-700 dark:bg-zinc-600 dark:text-gray-300"
                       }`}
                     >
-                      {settings.columnVisibility[columnKey] && (
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </button>
-                    <label className="text-sm text-gray-700 dark:text-gray-300">{label}</label>
-                  </div>
+                      {isVisible ? "On" : "Off"}
+                    </span>
+                  </button>
                 );
               })}
             </div>
@@ -1289,38 +1293,38 @@ export default function Settings() {
               { key: "statTiles" as const, label: "Stat Tiles", desc: "Small stat cards at the top", icon: "📊" },
               { key: "recentFlights" as const, label: "Recent Flights", desc: "Your most recent flights table", icon: "✈️" },
               { key: "aircraftTotals" as const, label: "Aircraft Totals", desc: "Totals by aircraft type", icon: "🛩️" },
-            ]).map(({ key, label, desc, icon }) => (
-              <div
-                key={key}
-                className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 transition-colors ${
-                  dashboardSections[key]
-                    ? "bg-blue-50 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400"
-                    : "bg-gray-50 border-gray-200 dark:bg-zinc-800 dark:border-zinc-400"
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-xl shrink-0">{icon}</span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{label}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{desc}</p>
-                  </div>
-                </div>
-                {/* Custom toggle switch */}
+            ]).map(({ key, label, desc, icon }) => {
+              const isShown = dashboardSections[key];
+              return (
                 <button
+                  key={key}
                   onClick={() => toggleDashboardSection(key)}
-                  className={`relative w-12 h-6 rounded-full shrink-0 transition-colors ${
-                    dashboardSections[key] ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
+                  aria-pressed={isShown}
+                  className={`flex items-center justify-between gap-2 w-full p-3 sm:p-4 rounded-lg border-2 transition-colors text-left ${
+                    isShown
+                      ? "bg-blue-50 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400"
+                      : "bg-gray-50 border-gray-200 hover:bg-gray-100 dark:bg-zinc-800 dark:border-zinc-400 dark:hover:bg-zinc-700"
                   }`}
-                  aria-pressed={dashboardSections[key]}
                 >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-xl shrink-0">{icon}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{label}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{desc}</p>
+                    </div>
+                  </div>
                   <span
-                    className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                      dashboardSections[key] ? "left-7" : "left-1"
+                    className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                      isShown
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-300 text-gray-700 dark:bg-zinc-600 dark:text-gray-300"
                     }`}
-                  />
+                  >
+                    {isShown ? "On" : "Off"}
+                  </span>
                 </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -1340,26 +1344,32 @@ export default function Settings() {
                   {group.title}
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {group.columns.map(({ key, label }) => (
-                    <div key={key} className="flex items-center space-x-2">
-                      {/* Custom checkbox */}
+                  {group.columns.map(({ key, label }) => {
+                    const isOn = recentFlightsColumns[key];
+                    return (
                       <button
+                        key={key}
                         onClick={() => toggleRecentFlightsColumn(key)}
-                        className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                          recentFlightsColumns[key]
-                            ? "bg-blue-600 border-blue-600"
-                            : "border-gray-400 dark:border-gray-500"
+                        aria-pressed={isOn}
+                        className={`flex items-center justify-between gap-2 w-full p-3 rounded-lg border-2 transition-colors text-left ${
+                          isOn
+                            ? "bg-blue-50 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400"
+                            : "bg-gray-50 border-gray-200 hover:bg-gray-100 dark:bg-zinc-800 dark:border-zinc-400 dark:hover:bg-zinc-700"
                         }`}
                       >
-                        {recentFlightsColumns[key] && (
-                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
+                        <span className="text-sm font-medium text-gray-900 dark:text-white min-w-0">{label}</span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                            isOn
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-300 text-gray-700 dark:bg-zinc-600 dark:text-gray-300"
+                          }`}
+                        >
+                          {isOn ? "On" : "Off"}
+                        </span>
                       </button>
-                      <label className="text-sm text-gray-700 dark:text-gray-300">{label}</label>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
