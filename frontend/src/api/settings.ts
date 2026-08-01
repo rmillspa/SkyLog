@@ -21,6 +21,8 @@
  */
 
 import { api } from "./client";
+import { getDefaultLayout } from "../dashboard/tileRegistry";
+import type { DashboardTileConfig } from "../dashboard/types";
 
 // ═════════════════════════════════════════════════
 // Types
@@ -78,10 +80,65 @@ export interface ColumnVisibility {
   remarks: boolean;
 }
 
+/** Which major sections are visible on the Dashboard page. */
+export interface DashboardSections {
+  /** The grid of small stat tiles at the top of the dashboard. */
+  statTiles: boolean;
+  /** The "Recent Flights" table below the stat tiles. */
+  recentFlights: boolean;
+  /** The "Aircraft Totals by Type" table at the bottom. */
+  aircraftTotals: boolean;
+}
+
+/** Which columns are visible on the Recent Flights dashboard tile.
+ *  Mirrors every data column presented on the Logbook page. */
+export interface RecentFlightsColumns {
+  date: boolean;
+  pilotInCommand: boolean;
+  aircraftType: boolean;
+  aircraftReg: boolean;
+  departure: boolean;
+  arrival: boolean;
+  totalTime: boolean;
+  selTime: boolean;
+  sesTime: boolean;
+  melTime: boolean;
+  mesTime: boolean;
+  helicopterTime: boolean;
+  gyroplaneTime: boolean;
+  poweredLiftTime: boolean;
+  gliderTime: boolean;
+  balloonTime: boolean;
+  airshipTime: boolean;
+  soloTime: boolean;
+  picTime: boolean;
+  sicTime: boolean;
+  dualTime: boolean;
+  instructorTime: boolean;
+  xcountryTime: boolean;
+  nightTime: boolean;
+  actInstrumentTime: boolean;
+  simInstrumentTime: boolean;
+  fullFlightSimulatorTime: boolean;
+  flightTrainingDeviceTime: boolean;
+  aviationTrainingDeviceTime: boolean;
+  takeoffsDay: boolean;
+  takeoffsNight: boolean;
+  landingsDay: boolean;
+  landingsNight: boolean;
+  precisionApproaches: boolean;
+  nonPrecisionApproaches: boolean;
+  holdingPatterns: boolean;
+  launchType: boolean;
+  remarks: boolean;
+}
+
 /** Full settings object stored in localStorage. */
 export interface SettingsData {
   pageVisibility: PageVisibility;
   columnVisibility: ColumnVisibility;
+  recentFlightsColumns: RecentFlightsColumns;
+  dashboardSections: DashboardSections;
   username: string;
   pageSize: number;
   showLoginPage: boolean;
@@ -141,6 +198,125 @@ export const DEFAULT_PAGE_VISIBILITY: PageVisibility = {
   FAA8710: true,
 };
 
+/** Default: every major Dashboard section is visible. */
+export const DEFAULT_DASHBOARD_SECTIONS: DashboardSections = {
+  statTiles: true,
+  recentFlights: true,
+  aircraftTotals: true,
+};
+
+/**
+ * Default dashboard stat-tile layout (which tiles are enabled, their
+ * widths and order). Delegates to the tile registry so it always matches
+ * the tiles marked `enabledByDefault` — the same source the backend uses
+ * when no saved layout exists.
+ *
+ * Used by the dashboard customizer and by Settings when resetting all
+ * settings to defaults.
+ */
+export function getDefaultDashboardLayout(): DashboardTileConfig[] {
+  return getDefaultLayout();
+}
+
+/**
+ * Default Recent Flights tile columns: Date, Aircraft Type, From, To,
+ * Total Time, PIC, SIC, Night, Full Flight Simulator, SEL and MEL.
+ * All other columns default to hidden so the tile stays compact until
+ * the user opts in via Settings.
+ */
+export const DEFAULT_RECENT_FLIGHTS_COLUMNS: RecentFlightsColumns = {
+  date: true,
+  pilotInCommand: false,
+  aircraftType: true,
+  aircraftReg: false,
+  departure: true,
+  arrival: true,
+  totalTime: true,
+  selTime: true,
+  sesTime: false,
+  melTime: true,
+  mesTime: false,
+  helicopterTime: false,
+  gyroplaneTime: false,
+  poweredLiftTime: false,
+  gliderTime: false,
+  balloonTime: false,
+  airshipTime: false,
+  soloTime: false,
+  picTime: true,
+  sicTime: true,
+  dualTime: false,
+  instructorTime: false,
+  xcountryTime: false,
+  nightTime: true,
+  actInstrumentTime: false,
+  simInstrumentTime: false,
+  fullFlightSimulatorTime: true,
+  flightTrainingDeviceTime: false,
+  aviationTrainingDeviceTime: false,
+  takeoffsDay: false,
+  takeoffsNight: false,
+  landingsDay: false,
+  landingsNight: false,
+  precisionApproaches: false,
+  nonPrecisionApproaches: false,
+  holdingPatterns: false,
+  launchType: false,
+  remarks: false,
+};
+
+/**
+ * Keys of aviation "Time Categories" that are user-toggleable both in
+ * Settings → Time Category Visibility (ColumnVisibility) and on the
+ * Recent Flights dashboard tile (RecentFlightsColumns).
+ *
+ * When a Time Category is hidden in the Time Category Visibility settings,
+ * its Recent Flights tile column must not be offered in Dashboard Settings
+ * or presented on the tile. `totalTime` is intentionally excluded — it has
+ * no Time Category Visibility toggle and is always available.
+ */
+export const TIME_CATEGORY_COLUMN_KEYS: Array<
+  keyof ColumnVisibility & keyof RecentFlightsColumns
+> = [
+  "selTime",
+  "sesTime",
+  "melTime",
+  "mesTime",
+  "helicopterTime",
+  "gyroplaneTime",
+  "poweredLiftTime",
+  "gliderTime",
+  "balloonTime",
+  "airshipTime",
+];
+
+/**
+ * Return a copy of `columns` with every Time Category tile column forced
+ * off when the matching Time Category is hidden in `visibility`. Used to
+ * keep Recent Flights tile preferences in sync with Time Category
+ * Visibility (and to sanitise data loaded from storage/API).
+ */
+export function withVisibleTimeCategoriesOnly(
+  columns: RecentFlightsColumns,
+  visibility: ColumnVisibility,
+): RecentFlightsColumns {
+  const result = { ...columns };
+  for (const key of TIME_CATEGORY_COLUMN_KEYS) {
+    if (!visibility[key]) {
+      result[key] = false;
+    }
+  }
+  return result;
+}
+
+/** O(1) membership lookup for Time Category column keys. */
+const TIME_CATEGORY_COLUMN_SET: ReadonlySet<string> = new Set(TIME_CATEGORY_COLUMN_KEYS);
+
+/** Whether a column key is a user-toggleable Time Category. */
+export function isTimeCategoryColumn(key: string): boolean {
+  return TIME_CATEGORY_COLUMN_SET.has(key);
+}
+
 const DEFAULT_PAGE_SIZE = 15;
 
 // ═════════════════════════════════════════════════
@@ -169,9 +345,25 @@ export function loadSettings(): SettingsData {
     const raw = localStorage.getItem("flightLogbookSettings");
     if (raw) {
       const parsed = JSON.parse(raw);
+      const columnVisibility: ColumnVisibility = {
+        ...DEFAULT_COLUMN_VISIBILITY,
+        ...parsed.columnVisibility,
+      };
+      const recentFlightsColumns: RecentFlightsColumns = withVisibleTimeCategoriesOnly(
+        {
+          ...DEFAULT_RECENT_FLIGHTS_COLUMNS,
+          ...parsed.recentFlightsColumns,
+        },
+        columnVisibility,
+      );
       return {
         pageVisibility: { ...DEFAULT_PAGE_VISIBILITY, ...parsed.pageVisibility },
-        columnVisibility: { ...DEFAULT_COLUMN_VISIBILITY, ...parsed.columnVisibility },
+        columnVisibility,
+        recentFlightsColumns,
+        dashboardSections: {
+          ...DEFAULT_DASHBOARD_SECTIONS,
+          ...parsed.dashboardSections,
+        },
         username: parsed.username ?? "",
         pageSize: parsed.pageSize ?? DEFAULT_PAGE_SIZE,
         showLoginPage: parsed.showLoginPage ?? true,
@@ -183,6 +375,8 @@ export function loadSettings(): SettingsData {
   return {
     pageVisibility: { ...DEFAULT_PAGE_VISIBILITY },
     columnVisibility: { ...DEFAULT_COLUMN_VISIBILITY },
+    recentFlightsColumns: { ...DEFAULT_RECENT_FLIGHTS_COLUMNS },
+    dashboardSections: { ...DEFAULT_DASHBOARD_SECTIONS },
     username: "",
     pageSize: DEFAULT_PAGE_SIZE,
     showLoginPage: true,
@@ -269,6 +463,12 @@ function syncVisibilityToLocal(
   const current = loadSettings();
   current.pageVisibility = pageVisibility;
   current.columnVisibility = columnVisibility;
+  // A time category that is now hidden must not stay enabled on the
+  // Recent Flights tile, otherwise it would silently render on the Dashboard.
+  current.recentFlightsColumns = withVisibleTimeCategoriesOnly(
+    current.recentFlightsColumns,
+    columnVisibility,
+  );
   localStorage.setItem("flightLogbookSettings", JSON.stringify(current));
   window.dispatchEvent(new CustomEvent("settingsUpdated", { detail: current }));
 }
@@ -294,6 +494,111 @@ export async function saveVisibilityToApi(
     await api.saveVisibility(page_visibility, column_visibility);
   } catch {
     console.warn("Failed to save visibility to backend, localStorage fallback is in use");
+  }
+}
+
+// ═════════════════════════════════════════════════
+// Recent Flights tile column helpers
+// ═════════════════════════════════════════════════
+
+/**
+ * Load Recent Flights tile column preferences from the backend API,
+ * falling back to localStorage if the API call fails. Syncs the result
+ * into localStorage so synchronous `loadSettings()` sees the data.
+ */
+export async function loadRecentFlightsColumnsFromApi(): Promise<RecentFlightsColumns> {
+  try {
+    const res = await api.getRecentFlightsColumns();
+    const base: RecentFlightsColumns = {
+      ...DEFAULT_RECENT_FLIGHTS_COLUMNS,
+      ...(res.columns ?? {}),
+    };
+    const visibility = loadSettings().columnVisibility;
+    const columns = withVisibleTimeCategoriesOnly(base, visibility);
+    const current = loadSettings();
+    current.recentFlightsColumns = columns;
+    localStorage.setItem("flightLogbookSettings", JSON.stringify(current));
+    window.dispatchEvent(new CustomEvent("settingsUpdated", { detail: current }));
+    return columns;
+  } catch {
+    return loadSettings().recentFlightsColumns;
+  }
+}
+
+/**
+ * Save Recent Flights tile column preferences to **both** the backend
+ * API and localStorage.
+ */
+export async function saveRecentFlightsColumnsToApi(columns: RecentFlightsColumns): Promise<void> {
+  const current = loadSettings();
+  current.recentFlightsColumns = columns;
+  localStorage.setItem("flightLogbookSettings", JSON.stringify(current));
+  window.dispatchEvent(new CustomEvent("settingsUpdated", { detail: current }));
+
+  try {
+    await api.saveRecentFlightsColumns(columns);
+  } catch {
+    console.warn("Failed to save recent flights columns to backend, localStorage fallback is in use");
+  }
+}
+
+// ═════════════════════════════════════════════════
+// Dashboard section visibility helpers
+// ═════════════════════════════════════════════════
+
+/**
+ * Load Dashboard section visibility preferences from the backend API,
+ * falling back to localStorage if the API call fails. Syncs the result
+ * into localStorage so synchronous `loadSettings()` sees the data.
+ */
+export async function loadDashboardSectionsFromApi(): Promise<DashboardSections> {
+  try {
+    const res = await api.getDashboardSections();
+    const sections: DashboardSections = {
+      ...DEFAULT_DASHBOARD_SECTIONS,
+      ...(res.sections ?? {}),
+    };
+    const current = loadSettings();
+    current.dashboardSections = sections;
+    localStorage.setItem("flightLogbookSettings", JSON.stringify(current));
+    window.dispatchEvent(new CustomEvent("settingsUpdated", { detail: current }));
+    return sections;
+  } catch {
+    return loadSettings().dashboardSections;
+  }
+}
+
+/**
+ * Save Dashboard section visibility preferences to **both** the backend
+ * API and localStorage.
+ */
+export async function saveDashboardSectionsToApi(sections: DashboardSections): Promise<void> {
+  const current = loadSettings();
+  current.dashboardSections = sections;
+  localStorage.setItem("flightLogbookSettings", JSON.stringify(current));
+  window.dispatchEvent(new CustomEvent("settingsUpdated", { detail: current }));
+
+  try {
+    await api.saveDashboardSections(sections);
+  } catch {
+    console.warn("Failed to save dashboard sections to backend, localStorage fallback is in use");
+  }
+}
+
+// ═════════════════════════════════════════════════
+// Dashboard stat-tile layout helpers
+// ═════════════════════════════════════════════════
+
+/**
+ * Load the user's dashboard stat-tile layout from the backend API,
+ * falling back to the default registry layout if the API call fails.
+ */
+export async function loadDashboardLayoutFromApi(): Promise<DashboardTileConfig[]> {
+  try {
+    const res = await api.getDashboardLayout();
+    return (res.layout ?? []) as DashboardTileConfig[];
+  } catch {
+    return getDefaultDashboardLayout();
   }
 }
 

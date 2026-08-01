@@ -19,6 +19,57 @@
 
 import type { Flight, FlightCreate, DashboardStats, Attachment, AircraftTypeStat } from "./types";
 
+/** Boolean flags for each major section shown on the Dashboard page.
+ *  Mirrors DashboardSections in api/settings.ts (kept in sync manually). */
+export interface DashboardSectionsPayload {
+  statTiles: boolean;
+  recentFlights: boolean;
+  aircraftTotals: boolean;
+}
+
+/** Boolean flags for each column shown on the Recent Flights dashboard tile.
+ *  Mirrors RecentFlightsColumns in api/settings.ts (kept in sync manually). */
+export interface RecentFlightsColumnsPayload {
+  date: boolean;
+  pilotInCommand: boolean;
+  aircraftType: boolean;
+  aircraftReg: boolean;
+  departure: boolean;
+  arrival: boolean;
+  totalTime: boolean;
+  selTime: boolean;
+  sesTime: boolean;
+  melTime: boolean;
+  mesTime: boolean;
+  helicopterTime: boolean;
+  gyroplaneTime: boolean;
+  poweredLiftTime: boolean;
+  gliderTime: boolean;
+  balloonTime: boolean;
+  airshipTime: boolean;
+  soloTime: boolean;
+  picTime: boolean;
+  sicTime: boolean;
+  dualTime: boolean;
+  instructorTime: boolean;
+  xcountryTime: boolean;
+  nightTime: boolean;
+  actInstrumentTime: boolean;
+  simInstrumentTime: boolean;
+  fullFlightSimulatorTime: boolean;
+  flightTrainingDeviceTime: boolean;
+  aviationTrainingDeviceTime: boolean;
+  takeoffsDay: boolean;
+  takeoffsNight: boolean;
+  landingsDay: boolean;
+  landingsNight: boolean;
+  precisionApproaches: boolean;
+  nonPrecisionApproaches: boolean;
+  holdingPatterns: boolean;
+  launchType: boolean;
+  remarks: boolean;
+}
+
 /** Base URL for all API requests. The Vite dev server proxies /api
  *  to the backend (configured in vite.config.ts). In production,
  *  the same origin serves both frontend and backend.
@@ -295,6 +346,32 @@ export const api = {
     request<{ status: string }>("/settings/visibility", {
       method: "PUT",
       body: JSON.stringify({ page_visibility: pageVisibility, column_visibility: columnVisibility }),
+    }),
+
+  // ═══ Dashboard Sections ═══
+
+  /** Get which major sections are shown on the Dashboard page. */
+  getDashboardSections: () =>
+    request<{ sections: DashboardSectionsPayload }>("/settings/dashboard-sections"),
+
+  /** Save which major sections are shown on the Dashboard page. */
+  saveDashboardSections: (sections: DashboardSectionsPayload) =>
+    request<{ status: string }>("/settings/dashboard-sections", {
+      method: "PUT",
+      body: JSON.stringify({ sections }),
+    }),
+
+  // ═══ Recent Flights Tile Columns ═══
+
+  /** Get which columns are shown on the Recent Flights dashboard tile. */
+  getRecentFlightsColumns: () =>
+    request<{ columns: RecentFlightsColumnsPayload }>("/settings/recent-flights-columns"),
+
+  /** Save which columns are shown on the Recent Flights dashboard tile. */
+  saveRecentFlightsColumns: (columns: RecentFlightsColumnsPayload) =>
+    request<{ status: string }>("/settings/recent-flights-columns", {
+      method: "PUT",
+      body: JSON.stringify({ columns }),
     }),
 
   // ═══ Glider Launch Type Check ═══

@@ -21,7 +21,8 @@
  * @module pages/EntryForm
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
+import { createPortal } from "react-dom";
 import { api } from "../api/client";
 import type { Flight } from "../api/types";
 import { loadSettings, loadVisibilityFromApi, saveVisibilityToApi, saveSettings, type ColumnVisibility } from "../api/settings";
@@ -188,6 +189,36 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
   // Tracks whether the user has manually typed into the total_time field.
   // When true, the auto-calc effect will skip updating total_time.
   const totalTimeManuallySet = useRef(false);
+
+  // ═══ Floating bottom submit bar ═══
+  // Mirrors the Settings page's fixed bottom bar: the submit button stays
+  // visible at the bottom of the viewport no matter how long the form is.
+  // Because the button is portaled to document.body, it links back to the
+  // form element via the form attribute (formId).
+  const formId = useId();
+
+  /** Ref to the fixed bottom submit bar, used to measure its live height. */
+  const bottomBarRef = useRef<HTMLDivElement>(null);
+
+  /** Measured height of the fixed bottom submit bar, used as content bottom
+   *  padding so the last field is never hidden behind the bar — even when a
+   *  success/error message makes the bar taller. */
+  const [bottomBarHeight, setBottomBarHeight] = useState(80);
+
+  // Keep the page's bottom padding in sync with the floating submit bar's
+  // actual height (ResizeObserver fires when messages appear/disappear or the
+  // viewport width changes the button height at different breakpoints).
+  useEffect(() => {
+    const bar = bottomBarRef.current;
+    if (!bar) return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setBottomBarHeight(entry.contentRect.height);
+      }
+    });
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
 
   // ═══ Previously-used values for autocomplete dropdowns ═══
   // All flights are fetched once so we can offer suggestions for PIC,
@@ -498,13 +529,22 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
   }
 
   // ═══ Render the form ═══
+
+  // Reserve space at the bottom of the scrollable content equal to the
+  // floating submit bar's measured height (plus breathing room) so the last
+  // field is never hidden underneath it.
+  const contentBottomPadding = bottomBarHeight + 16;
+
   return (
-    <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in">
+    <div
+      className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in"
+      style={{ paddingBottom: contentBottomPadding }}
+    >
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 dark:text-white">
         {isEditMode ? "Edit Flight" : "Log a New Flight"}
       </h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form id={formId} onSubmit={handleSubmit} className="space-y-4">
         {/* Dynamic grid of fields — column count adapts to screen width
             based on columnVisibility */}        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 min-w-0 max-w-full">
           {isFieldVisible("date") && (
@@ -1096,50 +1136,74 @@ export default function EntryForm({ editFlightId }: EntryFormProps) {
           </div>
         )}
 
-        {/* Success/Error message banner */}
-        {message && (
-          <div
-            className={`flex items-center gap-2 p-3 rounded-lg animate-slide-up ${
-              message.type === "error" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
-            }`}
-          >
-            {message.type === "success" ? (
-              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            )}
-            <span className="text-sm">{message.text}</span>
-          </div>
-        )}
-
-        {/* Submit button */}
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors btn-primary flex items-center justify-center gap-2"
-        >
-          {saving ? (
-            <>
-              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              {isEditMode ? "Updating..." : "Saving..."}
-            </>
-          ) : (
-            <>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              {isEditMode ? "Update Flight" : "Log Flight"}
-            </>
-          )}
-        </button>
       </form>
+
+      {/* ── Fixed bottom bar: message + submit button (always visible) ──────── */}
+      {/* Mirrors the Settings page: the bar is fixed to the viewport so the
+          submit button never scrolls out of view. The success/error message
+          renders stacked directly above the button inside the same bar.
+          pointer-events-none on the wrapper lets clicks pass through the
+          bar's empty areas to content underneath. The button links back to
+          the form via the `form` attribute. */}
+      {createPortal(
+        <div ref={bottomBarRef} className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none">
+          <div className="pointer-events-auto bg-white/90 dark:bg-zinc-900/90 backdrop-blur border-t border-gray-200 dark:border-zinc-400 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+            <div className="w-[95%] mx-auto py-3 sm:py-4 flex flex-col gap-3">
+              {/* Success/Error message — appears above the submit button */}
+              {message && (
+                <div
+                  className={`flex items-center gap-2 p-4 rounded-lg border shadow-md animate-fade-in ${
+                    message.type === "error"
+                      ? "bg-red-100 text-red-700 border-red-200 dark:bg-red-900 dark:text-red-300 dark:border-red-800"
+                      : "bg-green-100 text-green-700 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-800"
+                  }`}
+                >
+                  {message.type === "success" ? (
+                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <span className="text-sm">{message.text}</span>
+                </div>
+              )}
+
+              {/* Log Flight / Update Flight button — always visible */}
+              <button
+                type="submit"
+                form={formId}
+                disabled={saving}
+                className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 animate-fade-in"
+              >
+                {saving ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    {isEditMode ? "Updating..." : "Saving..."}
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {isEditMode ? "Update Flight" : "Log Flight"}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

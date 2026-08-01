@@ -20,8 +20,8 @@ import { StatTile } from "../dashboard/tiles/StatTile";
 import { RecentFlightsTile } from "../dashboard/tiles/RecentFlightsTile";
 import { AircraftTypeStatsTile } from "../dashboard/tiles/AircraftTypeStatsTile";
 import { DashboardCustomizer } from "../dashboard/DashboardCustomizer";
-import { loadSettings } from "../api/settings";
-import type { ColumnVisibility } from "../api/settings";
+import { loadSettings, loadRecentFlightsColumnsFromApi, loadDashboardSectionsFromApi, loadDashboardLayoutFromApi } from "../api/settings";
+import type { ColumnVisibility, RecentFlightsColumns, DashboardSections } from "../api/settings";
 import type { AircraftTypeStat } from "../api/types";
 
 /**
@@ -132,6 +132,12 @@ export default function Dashboard() {
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>(
     loadSettings().columnVisibility,
   );
+  const [recentFlightsColumns, setRecentFlightsColumns] = useState<RecentFlightsColumns>(
+    () => loadSettings().recentFlightsColumns,
+  );
+  const [dashboardSections, setDashboardSections] = useState<DashboardSections>(
+    () => loadSettings().dashboardSections,
+  );
 
   // Refs for touch-based drag-and-drop (mobile/tablet support)
   const touchDragIndex = useRef<number | null>(null);
@@ -146,6 +152,12 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       try {
+        // Load Recent Flights column preferences from backend (syncs to localStorage)
+        loadRecentFlightsColumnsFromApi().then(setRecentFlightsColumns).catch(() => {});
+
+        // Load Dashboard section visibility preferences from backend (syncs to localStorage)
+        loadDashboardSectionsFromApi().then(setDashboardSections).catch(() => {});
+
         const [layoutRes, statsRes, flights] = await Promise.all([
           api.getDashboardLayout(),
           api.getDashboardStats(),
@@ -181,13 +193,47 @@ export default function Dashboard() {
 
   // ── Listen for settings changes and sync layout ──
   useEffect(() => {
-    const handler = (e: CustomEvent<{ columnVisibility?: ColumnVisibility }>) => {
+    const handler = (e: CustomEvent<{ columnVisibility?: ColumnVisibility; settingsReset?: boolean }>) => {
       if (isSyncingRef.current) return;
       isSyncingRef.current = true;
+
+      // A settings reset wiped the backend + localStorage back to defaults,
+      // so reload the stat-tile layout from the server (which now returns
+      // the default tile set) instead of trying to sync the stale layout.
+      if (e.detail?.settingsReset) {
+        loadDashboardLayoutFromApi().then((fresh) => {
+          const hiddenSet = getHiddenTileTypes();
+          const synced = syncLayoutWithHiddenTiles(fresh, hiddenSet);
+          setLayout(synced);
+          isSyncingRef.current = false;
+        });
+        // Update Recent Flights column preferences
+        setRecentFlightsColumns(loadSettings().recentFlightsColumns);
+
+        // Update Dashboard section visibility preferences
+        const sections = loadSettings().dashboardSections;
+        setDashboardSections(sections);
+
+        // Update column visibility state so the aircraft type stats tile reacts
+        setColumnVisibility(loadSettings().columnVisibility);
+        return;
+      }
 
       // Update column visibility state so the aircraft type stats tile reacts
       if (e.detail?.columnVisibility) {
         setColumnVisibility(e.detail.columnVisibility);
+      }
+
+      // Update Recent Flights column preferences
+      setRecentFlightsColumns(loadSettings().recentFlightsColumns);
+
+      // Update Dashboard section visibility preferences
+      const sections = loadSettings().dashboardSections;
+      setDashboardSections(sections);
+
+      // If the stat tiles section is hidden, close the tile customizer
+      if (!sections.statTiles) {
+        setShowCustomizer(false);
       }
 
       setLayout((prev) => {
@@ -428,6 +474,12 @@ export default function Dashboard() {
   // ── Data state ──
   const sortedTiles = layout.slice().sort((a, b) => a.order - b.order);
 
+  // ── Section visibility (toggled in Settings → Dashboard Settings) ──
+  const showStatTiles = dashboardSections.statTiles;
+  const showRecentFlights = dashboardSections.recentFlights;
+  const showAircraftTotals = dashboardSections.aircraftTotals;
+  const noSectionsVisible = !showStatTiles && !showRecentFlights && !showAircraftTotals;
+
   return (
     <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in dark:bg-zinc-800">
       {/* Header */}
@@ -435,6 +487,7 @@ export default function Dashboard() {
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
           Dashboard
         </h1>
+        {showStatTiles && (
         <div className="flex items-center gap-2">
           {/* Manage Tiles button — opens the slide-over panel */}
           <button
@@ -474,11 +527,33 @@ export default function Dashboard() {
             )}
           </button>
         </div>
+        )}
       </div>
+
+      {/* All sections hidden — prompt the user to re-enable them in Settings */}
+      {noSectionsVisible && (
+        <div className="text-center py-16 animate-fade-in">
+          <div className="text-5xl mb-4">🙈</div>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-white mb-2">
+            All dashboard sections are hidden
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Toggle sections back on in Settings → Dashboard Settings.
+          </p>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("navigate", { detail: "settings" }))}
+            className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Open Dashboard Settings
+          </button>
+        </div>
+      )}
 
       {/* ═══════════════════════════════════════════
           Stat Card Tile Grid — reorderable via drag-and-drop
+          Visible only when "Stat Tiles" is enabled in Settings → Dashboard Settings
           ═══════════════════════════════════════════ */}
+      {showStatTiles && (
       <div
         ref={gridRef}
         className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3 sm:gap-4 mb-6 sm:mb-8 dark:text-white dark:bg-zinc-800 dark:border-zinc-300"
@@ -527,9 +602,10 @@ export default function Dashboard() {
           );
         })}
       </div>
+      )}
 
       {/* Reorder hint — shown in customize mode */}
-      {isCustomizing && (
+      {showStatTiles && isCustomizing && (
         <div className="mb-6 text-center animate-fade-in">
           <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
             Drag tiles to rearrange. Click <strong>Done</strong> when finished.
@@ -538,14 +614,16 @@ export default function Dashboard() {
       )}
 
       {/* ═══════════════════════════════════════════
-          Recent Flights — static, NOT customizable
+          Recent Flights — visibility toggled in Settings → Dashboard Settings
           ═══════════════════════════════════════════ */}
-      <RecentFlightsTile flights={recentFlights} />
+      {showRecentFlights && (
+        <RecentFlightsTile flights={recentFlights} columns={recentFlightsColumns} />
+      )}
 
       {/* ═══════════════════════════════════════════
-          Aircraft Type Totals — static, NOT customizable
+          Aircraft Type Totals — visibility toggled in Settings → Dashboard Settings
           ═══════════════════════════════════════════ */}
-      {aircraftTypeStats.length > 0 && (
+      {showAircraftTotals && aircraftTypeStats.length > 0 && (
         <div className="mt-6 sm:mt-8">
           <AircraftTypeStatsTile
             stats={aircraftTypeStats}

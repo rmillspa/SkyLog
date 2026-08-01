@@ -307,6 +307,26 @@ type DashboardLayoutSaveRequest struct {
 	Layout []DashboardLayoutTile `json:"layout"`
 }
 
+// DashboardSectionsResponse is returned by GET /api/settings/dashboard-sections.
+type DashboardSectionsResponse struct {
+	Sections map[string]bool `json:"sections"`
+}
+
+// DashboardSectionsSaveRequest is the body for PUT /api/settings/dashboard-sections.
+type DashboardSectionsSaveRequest struct {
+	Sections map[string]bool `json:"sections"`
+}
+
+// RecentFlightsColumnsResponse is returned by GET /api/settings/recent-flights-columns.
+type RecentFlightsColumnsResponse struct {
+	Columns map[string]bool `json:"columns"`
+}
+
+// RecentFlightsColumnsSaveRequest is the body for PUT /api/settings/recent-flights-columns.
+type RecentFlightsColumnsSaveRequest struct {
+	Columns map[string]bool `json:"columns"`
+}
+
 // DefaultPageResponse is returned by GET /api/settings/default-page.
 type DefaultPageResponse struct {
 	Page string `json:"page"`
