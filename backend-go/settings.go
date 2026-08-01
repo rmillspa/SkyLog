@@ -38,6 +38,12 @@ func registerSettingsRoutes(mux *http.ServeMux, db *sql.DB) {
 	// Default page
 	mux.HandleFunc("GET /api/settings/default-page", getDefaultPage(db))
 	mux.HandleFunc("PUT /api/settings/default-page", saveDefaultPage(db))
+	// Recent Flights tile columns
+	mux.HandleFunc("GET /api/settings/recent-flights-columns", getRecentFlightsColumns(db))
+	mux.HandleFunc("PUT /api/settings/recent-flights-columns", saveRecentFlightsColumns(db))
+	// Dashboard section visibility
+	mux.HandleFunc("GET /api/settings/dashboard-sections", getDashboardSections(db))
+	mux.HandleFunc("PUT /api/settings/dashboard-sections", saveDashboardSections(db))
 }
 
 // ── Password hashing ──
@@ -668,6 +674,12 @@ func resetSettings(db *sql.DB) http.HandlerFunc {
 		// Delete dashboard layout
 		_, _ = db.ExecContext(r.Context(),
 			"DELETE FROM user_dashboard WHERE user_id = ?", userID)
+		// Delete Recent Flights tile columns preference
+		_, _ = db.ExecContext(r.Context(),
+			"DELETE FROM settings WHERE key = ?", recentFlightsColumnsKey(userID))
+		// Delete Dashboard section visibility preference
+		_, _ = db.ExecContext(r.Context(),
+			"DELETE FROM settings WHERE key = ?", dashboardSectionsKey(userID))
 
 		writeJSON(w, 200, map[string]string{"status": "ok"})
 	}
@@ -756,6 +768,199 @@ func saveDefaultPage(db *sql.DB) http.HandlerFunc {
 		key := fmt.Sprintf("default_page_%d", userID)
 		_, err = db.ExecContext(r.Context(),
 			"INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", key, req.Page)
+		if err != nil {
+			writeError(w, 500, "Database error")
+			return
+		}
+
+		writeJSON(w, 200, map[string]string{"status": "ok"})
+	}
+}
+
+// ── GET /api/settings/recent-flights-columns ──
+
+// recentFlightsColumnsKey returns the per-user settings key used to
+// persist which columns appear on the Recent Flights dashboard tile.
+func recentFlightsColumnsKey(userID int) string {
+	return fmt.Sprintf("recent_flights_columns_%d", userID)
+}
+
+// recentFlightsColumnsDefaults returns the default set of visible columns
+// for the Recent Flights dashboard tile: the original compact set with the
+// additional logbook categories hidden until the user opts in via Settings.
+// Must match DEFAULT_RECENT_FLIGHTS_COLUMNS in frontend/src/api/settings.ts.
+func recentFlightsColumnsDefaults() map[string]bool {
+	defaults := make(map[string]bool)
+
+	// Basic Information — the original compact set
+	trueKeys := []string{
+		"date", "aircraftType", "aircraftReg", "departure", "arrival",
+		"totalTime", "picTime", "sicTime",
+	}
+	for _, k := range trueKeys {
+		defaults[k] = true
+	}
+
+	// Every other selectable category — hidden by default
+	falseKeys := []string{
+		"pilotInCommand",
+		"selTime", "sesTime", "melTime", "mesTime",
+		"helicopterTime", "gyroplaneTime", "poweredLiftTime",
+		"gliderTime", "balloonTime", "airshipTime",
+		"soloTime", "dualTime", "instructorTime",
+		"xcountryTime", "nightTime",
+		"actInstrumentTime", "simInstrumentTime",
+		"fullFlightSimulatorTime", "flightTrainingDeviceTime",
+		"aviationTrainingDeviceTime",
+		"takeoffsDay", "takeoffsNight", "landingsDay", "landingsNight",
+		"precisionApproaches", "nonPrecisionApproaches", "holdingPatterns",
+		"launchType", "remarks",
+	}
+	for _, k := range falseKeys {
+		defaults[k] = false
+	}
+
+	return defaults
+}
+
+func getRecentFlightsColumns(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, err := getUserID(r, db)
+		if err != nil {
+			he := err.(*httpError)
+			writeError(w, he.Code, he.Message)
+			return
+		}
+
+		var raw string
+		err = db.QueryRowContext(r.Context(),
+			"SELECT value FROM settings WHERE key = ?", recentFlightsColumnsKey(userID)).Scan(&raw)
+		if err != nil {
+			// No saved preference — return the default compact set.
+			// Matches DEFAULT_RECENT_FLIGHTS_COLUMNS in the frontend.
+			writeJSON(w, 200, RecentFlightsColumnsResponse{Columns: recentFlightsColumnsDefaults()})
+			return
+		}
+
+		columns := make(map[string]bool)
+		if err := json.Unmarshal([]byte(raw), &columns); err != nil {
+			// Corrupted value — return defaults
+			writeJSON(w, 200, RecentFlightsColumnsResponse{Columns: recentFlightsColumnsDefaults()})
+			return
+		}
+
+		writeJSON(w, 200, RecentFlightsColumnsResponse{Columns: columns})
+	}
+}
+
+// ── PUT /api/settings/recent-flights-columns ──
+
+func saveRecentFlightsColumns(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, err := getUserID(r, db)
+		if err != nil {
+			he := err.(*httpError)
+			writeError(w, he.Code, he.Message)
+			return
+		}
+
+		var req RecentFlightsColumnsSaveRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, 422, "Invalid JSON body")
+			return
+		}
+
+		b, err := json.Marshal(req.Columns)
+		if err != nil {
+			writeError(w, 500, "Failed to serialise columns")
+			return
+		}
+
+		_, err = db.ExecContext(r.Context(),
+			"INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+			recentFlightsColumnsKey(userID), string(b))
+		if err != nil {
+			writeError(w, 500, "Database error")
+			return
+		}
+
+		writeJSON(w, 200, map[string]string{"status": "ok"})
+	}
+}
+
+// ── GET /api/settings/dashboard-sections ──
+
+// dashboardSectionsKey returns the per-user settings key used to
+// persist which major sections are visible on the Dashboard page.
+func dashboardSectionsKey(userID int) string {
+	return fmt.Sprintf("dashboard_sections_%d", userID)
+}
+
+// dashboardSectionsDefaults returns the default set of visible Dashboard
+// sections. Must match DEFAULT_DASHBOARD_SECTIONS in frontend/src/api/settings.ts.
+func dashboardSectionsDefaults() map[string]bool {
+	return map[string]bool{
+		"statTiles":      true,
+		"recentFlights":  true,
+		"aircraftTotals": true,
+	}
+}
+
+func getDashboardSections(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, err := getUserID(r, db)
+		if err != nil {
+			he := err.(*httpError)
+			writeError(w, he.Code, he.Message)
+			return
+		}
+
+		var raw string
+		err = db.QueryRowContext(r.Context(),
+			"SELECT value FROM settings WHERE key = ?", dashboardSectionsKey(userID)).Scan(&raw)
+		if err != nil {
+			// No saved preference — return the defaults.
+			writeJSON(w, 200, DashboardSectionsResponse{Sections: dashboardSectionsDefaults()})
+			return
+		}
+
+		sections := make(map[string]bool)
+		if err := json.Unmarshal([]byte(raw), &sections); err != nil {
+			// Corrupted value — return defaults
+			writeJSON(w, 200, DashboardSectionsResponse{Sections: dashboardSectionsDefaults()})
+			return
+		}
+
+		writeJSON(w, 200, DashboardSectionsResponse{Sections: sections})
+	}
+}
+
+// ── PUT /api/settings/dashboard-sections ──
+
+func saveDashboardSections(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, err := getUserID(r, db)
+		if err != nil {
+			he := err.(*httpError)
+			writeError(w, he.Code, he.Message)
+			return
+		}
+
+		var req DashboardSectionsSaveRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, 422, "Invalid JSON body")
+			return
+		}
+
+		b, err := json.Marshal(req.Sections)
+		if err != nil {
+			writeError(w, 500, "Failed to serialise sections")
+			return
+		}
+
+		_, err = db.ExecContext(r.Context(),
+			"INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+			dashboardSectionsKey(userID), string(b))
 		if err != nil {
 			writeError(w, 500, "Database error")
 			return

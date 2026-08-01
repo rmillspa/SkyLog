@@ -19,14 +19,24 @@
  * Each settings section is a collapsible card that starts closed.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "../api/client";
 import type { Flight } from "../api/types";
 import {
   type PageVisibility,
   type ColumnVisibility,
+  type RecentFlightsColumns,
+  type DashboardSections,
+  DEFAULT_RECENT_FLIGHTS_COLUMNS,
+  isTimeCategoryColumn,
+  withVisibleTimeCategoriesOnly,
   saveVisibilityToApi,
   loadVisibilityFromApi,
+  saveRecentFlightsColumnsToApi,
+  loadRecentFlightsColumnsFromApi,
+  loadDashboardSectionsFromApi,
+  saveDashboardSectionsToApi,
   loadSettings as loadSettingsFromStorage,
 } from "../api/settings";
 import { type ThemeMode, getThemeMode, setThemeMode } from "../api/theme";
@@ -46,28 +56,37 @@ interface SettingsState {
 function CollapsibleSection({
   title,
   defaultOpen = false,
+  alwaysOpen = false,
   children,
 }: {
   title: string;
   defaultOpen?: boolean;
+  alwaysOpen?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const isOpen = alwaysOpen || open;
   return (
     <div className="bg-white rounded-xl shadow-md mb-6 border border-gray-100 dark:bg-zinc-900 dark:border-zinc-400 animate-fade-in">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-6 py-4 text-left"
-      >
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
-        <svg
-          className={`w-5 h-5 text-gray-400 dark:text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
-          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+      {alwaysOpen ? (
+        <div className="w-full px-6 py-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
+        </div>
+      ) : (
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-full flex items-center justify-between px-6 py-4 text-left"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {open && <div className="px-6 pb-6">{children}</div>}
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
+          <svg
+            className={`w-5 h-5 text-gray-400 dark:text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      )}
+      {isOpen && <div className="px-6 pb-6">{children}</div>}
     </div>
   );
 }
@@ -192,6 +211,40 @@ export default function Settings() {
   /** Default page the app opens to. */
   const [defaultPage, setDefaultPage] = useState("dashboard");
 
+  /** Which columns are shown on the Recent Flights dashboard tile. */
+  const [recentFlightsColumns, setRecentFlightsColumns] = useState<RecentFlightsColumns>(() => {
+    const loaded = loadSettingsFromStorage();
+    return withVisibleTimeCategoriesOnly(loaded.recentFlightsColumns, loaded.columnVisibility);
+  });
+
+  /** Which major sections are shown on the Dashboard page. */
+  const [dashboardSections, setDashboardSections] = useState<DashboardSections>(
+    () => loadSettingsFromStorage().dashboardSections,
+  );
+
+  /** Ref to the fixed bottom save bar, used to measure its live height. */
+  const bottomBarRef = useRef<HTMLDivElement>(null);
+
+  /** Measured height of the fixed bottom save bar, used as content bottom padding
+   *  so the last section (Danger Zone) is never hidden behind the bar — even when
+   *  a toast notification makes the bar taller. */
+  const [bottomBarHeight, setBottomBarHeight] = useState(80);
+
+  // Keep the page's bottom padding in sync with the floating save bar's actual
+  // height (ResizeObserver fires when toasts appear/disappear or the viewport
+  // width changes the button height at different breakpoints).
+  useEffect(() => {
+    const bar = bottomBarRef.current;
+    if (!bar) return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setBottomBarHeight(entry.contentRect.height);
+      }
+    });
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
+
   const handleThemeChange = (mode: ThemeMode) => {
     setThemeMode(mode);
     setThemeModeState(mode);
@@ -239,8 +292,12 @@ export default function Settings() {
         pageVisibility: defaults.pageVisibility,
         columnVisibility: defaults.columnVisibility,
       }));
+      setRecentFlightsColumns(defaults.recentFlightsColumns);
+      setDashboardSections(defaults.dashboardSections);
       // Save defaults to backend so they persist
       await saveVisibilityToApi(defaults.pageVisibility, defaults.columnVisibility);
+      await saveRecentFlightsColumnsToApi(defaults.recentFlightsColumns);
+      await saveDashboardSectionsToApi(defaults.dashboardSections);
       // Notify other components
       window.dispatchEvent(new CustomEvent("settingsUpdated", { detail: defaults }));
       setResetSettingsStep(2);
@@ -260,20 +317,21 @@ export default function Settings() {
     try {
       const { hasGliderLaunchType: h } = await api.hasGliderLaunchType();
       if (h) {
-        setSettings(prev => {
-          if (!prev.columnVisibility.launchType) {
-            const updated = {
-              ...prev,
-              columnVisibility: { ...prev.columnVisibility, launchType: true },
-            };
-            // Persist immediately so Logbook picks it up
-            localStorage.setItem("flightLogbookSettings", JSON.stringify(updated));
-            saveVisibilityToApi(updated.pageVisibility, updated.columnVisibility).catch(() => {});
-            window.dispatchEvent(new CustomEvent("settingsUpdated", { detail: updated }));
-            return updated;
-          }
-          return prev;
-        });
+        // Build the update from the full persisted settings so fields like
+        // recentFlightsColumns are preserved (not reset to defaults).
+        const current = loadSettingsFromStorage();
+        if (!current.columnVisibility.launchType) {
+          current.columnVisibility.launchType = true;
+          // Persist immediately so Logbook picks it up
+          localStorage.setItem("flightLogbookSettings", JSON.stringify(current));
+          saveVisibilityToApi(current.pageVisibility, current.columnVisibility).catch(() => {});
+          window.dispatchEvent(new CustomEvent("settingsUpdated", { detail: current }));
+          setSettings(prev => ({
+            ...prev,
+            pageVisibility: current.pageVisibility,
+            columnVisibility: current.columnVisibility,
+          }));
+        }
       }
     } catch {
       // Ignore errors
@@ -314,6 +372,12 @@ export default function Settings() {
         columnVisibility,
       }));
 
+      // Load Recent Flights tile column preferences (syncs to localStorage)
+      loadRecentFlightsColumnsFromApi().then(setRecentFlightsColumns).catch(() => {});
+
+      // Load Dashboard section visibility preferences (syncs to localStorage)
+      loadDashboardSectionsFromApi().then(setDashboardSections).catch(() => {});
+
       const user = await api.getCurrentUser();
       setSettings(prev => ({ ...prev, username: user.username }));
     } catch (e) {
@@ -345,6 +409,8 @@ export default function Settings() {
       localStorage.setItem("flightLogbookSettings", JSON.stringify(settings));
 
       await saveVisibilityToApi(settings.pageVisibility, settings.columnVisibility);
+      await saveRecentFlightsColumnsToApi(recentFlightsColumns);
+      await saveDashboardSectionsToApi(dashboardSections);
 
       window.dispatchEvent(new CustomEvent("settingsUpdated", {
         detail: settings,
@@ -778,6 +844,33 @@ export default function Settings() {
     }));
   };
 
+  /**
+   * Toggle visibility for a single Recent Flights tile column.
+   * Time Category columns whose category is hidden in "Time Category
+   * Visibility" can never be switched on — they are not available for
+   * presentation on the tile.
+   */
+  const toggleRecentFlightsColumn = (column: keyof RecentFlightsColumns) => {
+    setRecentFlightsColumns(prev => {
+      // A hidden Time Category must stay off no matter what.
+      if (
+        isTimeCategoryColumn(column) &&
+        !settings.columnVisibility[column as keyof ColumnVisibility]
+      ) {
+        return prev;
+      }
+      return { ...prev, [column]: !prev[column] };
+    });
+  };
+
+  /** Toggle visibility for a major Dashboard section. */
+  const toggleDashboardSection = (section: keyof DashboardSections) => {
+    setDashboardSections(prev => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
   // ── UI option definitions ─────────────────────────────────────────────────
 
   /** Column groupings for the visibility settings UI. */
@@ -865,10 +958,124 @@ export default function Settings() {
     { key: "newFlight", label: "New Flight" },
   ];
 
+  /**
+   * Column groupings for the Recent Flights tile settings UI.
+   * Mirrors the Logbook's visible data columns so users can pick any
+   * category their logbook presents.
+   */
+  const recentFlightsColumnGroups: {
+    title: string;
+    columns: { key: keyof RecentFlightsColumns; label: string }[];
+  }[] = [
+    {
+      title: "Basic Information",
+      columns: [
+        { key: "date", label: "Date" },
+        { key: "pilotInCommand", label: "Pilot in Command" },
+        { key: "aircraftType", label: "Aircraft Type" },
+        { key: "aircraftReg", label: "Registration" },
+        { key: "departure", label: "From" },
+        { key: "arrival", label: "To" },
+      ],
+    },
+    {
+      title: "Time Categories",
+      columns: [
+        { key: "totalTime", label: "Total Time" },
+        { key: "selTime", label: "Single Engine Land" },
+        { key: "sesTime", label: "Single Engine Sea" },
+        { key: "melTime", label: "Multi Engine Land" },
+        { key: "mesTime", label: "Multi Engine Sea" },
+        { key: "helicopterTime", label: "Helicopter" },
+        { key: "gyroplaneTime", label: "Gyroplane" },
+        { key: "poweredLiftTime", label: "Powered Lift" },
+        { key: "gliderTime", label: "Glider" },
+        { key: "balloonTime", label: "Balloon" },
+        { key: "airshipTime", label: "Airship" },
+      ],
+    },
+    {
+      title: "Pilot Time",
+      columns: [
+        { key: "soloTime", label: "Solo" },
+        { key: "picTime", label: "PIC" },
+        { key: "sicTime", label: "SIC" },
+        { key: "dualTime", label: "Dual Received" },
+        { key: "instructorTime", label: "Instructor" },
+      ],
+    },
+    {
+      title: "Special Categories",
+      columns: [
+        { key: "xcountryTime", label: "Cross Country Time" },
+        { key: "nightTime", label: "Night" },
+        { key: "actInstrumentTime", label: "Actual Instrument" },
+        { key: "simInstrumentTime", label: "Simulated Instrument" },
+        { key: "fullFlightSimulatorTime", label: "Full Flight Simulator" },
+        { key: "flightTrainingDeviceTime", label: "Flight Training Device" },
+        { key: "aviationTrainingDeviceTime", label: "Aviation Training Device" },
+      ],
+    },
+    {
+      title: "Takeoffs & Landings",
+      columns: [
+        { key: "takeoffsDay", label: "Day Takeoffs" },
+        { key: "takeoffsNight", label: "Night Takeoffs" },
+        { key: "landingsDay", label: "Day Landings" },
+        { key: "landingsNight", label: "Night Landings" },
+      ],
+    },
+    {
+      title: "Instrument Procedures",
+      columns: [
+        { key: "precisionApproaches", label: "Precision Approaches" },
+        { key: "nonPrecisionApproaches", label: "Non-Precision Approaches" },
+        { key: "holdingPatterns", label: "Holding Patterns" },
+      ],
+    },
+    {
+      title: "Other",
+      columns: [
+        { key: "launchType", label: "Glider/Lighter-than-Air Launch Type" },
+        { key: "remarks", label: "Remarks" },
+      ],
+    },
+  ];
+
+  /** Build a RecentFlightsColumns object with every column set to true. */
+  const allRecentFlightsOn = (): RecentFlightsColumns => {
+    const result = {} as RecentFlightsColumns;
+    for (const group of recentFlightsColumnGroups) {
+      for (const { key } of group.columns) {
+        result[key] = true;
+      }
+    }
+    return result;
+  };
+
+  /** Build a RecentFlightsColumns object with every column set to false. */
+  const allRecentFlightsOff = (): RecentFlightsColumns => {
+    const result = {} as RecentFlightsColumns;
+    for (const group of recentFlightsColumnGroups) {
+      for (const { key } of group.columns) {
+        result[key] = false;
+      }
+    }
+    return result;
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
 
+  // Reserve space at the bottom of the scrollable content equal to the floating
+  // save bar's measured height (plus breathing room) so the final section never
+  // sits underneath it. Uses an inline style so the value tracks the live height.
+  const contentBottomPadding = bottomBarHeight + 16;
+
   return (
-    <div className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in dark:bg-zinc-800">
+    <div
+      className="p-4 sm:p-8 w-[95%] mx-auto animate-fade-in dark:bg-zinc-800"
+      style={{ paddingBottom: contentBottomPadding }}
+    >
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Settings</h1>
 
       {/* ── Theme (always expanded) ──────────────────────────────────────────── */}
@@ -1062,8 +1269,130 @@ export default function Settings() {
         </div>
       </CollapsibleSection>
 
+      {/* ── Dashboard Settings ─────────────────────────────────────────────── */}
+      <CollapsibleSection title="Dashboard Settings">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+          Customize how your Dashboard looks and behaves.
+        </p>
+
+        {/* ── Display Sections ──────────────────────────────────────────────── */}
+        <div className="mb-6">
+          <h3 className="text-base font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Display Sections
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Toggle which sections of the Dashboard are shown.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {([
+              { key: "statTiles" as const, label: "Stat Tiles", desc: "Small stat cards at the top", icon: "📊" },
+              { key: "recentFlights" as const, label: "Recent Flights", desc: "Your most recent flights table", icon: "✈️" },
+              { key: "aircraftTotals" as const, label: "Aircraft Totals", desc: "Totals by aircraft type", icon: "🛩️" },
+            ]).map(({ key, label, desc, icon }) => (
+              <div
+                key={key}
+                className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 transition-colors ${
+                  dashboardSections[key]
+                    ? "bg-blue-50 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400"
+                    : "bg-gray-50 border-gray-200 dark:bg-zinc-800 dark:border-zinc-400"
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-xl shrink-0">{icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{label}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{desc}</p>
+                  </div>
+                </div>
+                {/* Custom toggle switch */}
+                <button
+                  onClick={() => toggleDashboardSection(key)}
+                  className={`relative w-12 h-6 rounded-full shrink-0 transition-colors ${
+                    dashboardSections[key] ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
+                  }`}
+                  aria-pressed={dashboardSections[key]}
+                >
+                  <span
+                    className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                      dashboardSections[key] ? "left-7" : "left-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Recent Flights Columns ──────────────────────────────────────────── */}
+        <div>
+          <h3 className="text-base font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Recent Flights Columns
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Choose which columns appear in the "Recent Flights" table on your Dashboard.
+          </p>
+
+          <div>
+            {recentFlightsColumnGroups.map((group) => (
+              <div key={group.title} className="mb-6 last:mb-0">
+                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 border-b border-gray-200 dark:border-zinc-400 pb-2">
+                  {group.title}
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {group.columns.map(({ key, label }) => (
+                    <div key={key} className="flex items-center space-x-2">
+                      {/* Custom checkbox */}
+                      <button
+                        onClick={() => toggleRecentFlightsColumn(key)}
+                        className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                          recentFlightsColumns[key]
+                            ? "bg-blue-600 border-blue-600"
+                            : "border-gray-400 dark:border-gray-500"
+                        }`}
+                      >
+                        {recentFlightsColumns[key] && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                      <label className="text-sm text-gray-700 dark:text-gray-300">{label}</label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Bulk show/hide buttons */}
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-400 flex flex-wrap gap-3">
+              <button
+                onClick={() => setRecentFlightsColumns(allRecentFlightsOn())}
+                className="text-sm px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
+              >
+                Show All
+              </button>
+              <button
+                onClick={() => setRecentFlightsColumns(allRecentFlightsOff())}
+                className="text-sm px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
+              >
+                Hide All
+              </button>
+              <button
+                onClick={() => setRecentFlightsColumns({ ...DEFAULT_RECENT_FLIGHTS_COLUMNS })}
+                className="text-sm px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600"
+              >
+                Reset to Defaults
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Future dashboard settings (e.g. tile layout defaults, default sort order) go here. */}
+      </CollapsibleSection>
+
       {/* ── User Settings ───────────────────────────────────────────────────── */}
-      <CollapsibleSection title="User Settings">
+      <CollapsibleSection title="User Settings" alwaysOpen>
         {/* Username */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username</label>
@@ -1210,7 +1539,7 @@ export default function Settings() {
       )}
 
       {/* ── CSV Management ─────────────────────────────────────────────────── */}
-      <CollapsibleSection title="CSV Management">
+      <CollapsibleSection title="CSV Management" alwaysOpen>
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Export button */}
           <div className="flex-1">
@@ -1266,7 +1595,7 @@ export default function Settings() {
       </CollapsibleSection>
 
       {/* ── Reset Settings ───────────────────────────────────────────────── */}
-      <CollapsibleSection title="Reset Settings">
+      <CollapsibleSection title="Reset Settings" alwaysOpen>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Restore all page visibility, column visibility, and currency threshold settings to their factory defaults.
           Your flight data, account, and password will not be affected.
@@ -1336,7 +1665,7 @@ export default function Settings() {
       </CollapsibleSection>
 
       {/* ── Danger Zone (Wipe Database) ────────────────────────────────────── */}
-      <CollapsibleSection title="Danger Zone">
+      <CollapsibleSection title="Danger Zone" alwaysOpen>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Permanently delete all flight records for your account. This action cannot be undone.
         </p>
@@ -1477,41 +1806,55 @@ export default function Settings() {
         </div>
       )}
 
-      {/* ── Toast notifications ──────────────────────────────────────────────── */}
-      {error && (
-        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg dark:bg-red-900 dark:text-red-300 animate-fade-in">
-          {error}
-        </div>
-      )}
+      {/* ── Fixed bottom bar: toasts + Save All Settings (always visible) ────── */}
+      {/* The bar is fixed to the viewport so the Save button never scrolls out
+          of view. Notifications (success/error) render stacked directly above
+          the button inside the same bar. pointer-events-none on the wrapper
+          lets clicks pass through the bar's empty areas to content underneath. */}
+      {createPortal(
+        <div ref={bottomBarRef} className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none">
+          <div className="pointer-events-auto bg-white/90 dark:bg-zinc-900/90 backdrop-blur border-t border-gray-200 dark:border-zinc-400 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+            <div className="w-[95%] mx-auto py-3 sm:py-4 flex flex-col gap-3">
+              {/* Toast notifications — appear above the Save button */}
+              {error && (
+                <div className="p-4 bg-red-100 text-red-700 rounded-lg border border-red-200 shadow-md dark:bg-red-900 dark:text-red-300 dark:border-red-800 animate-fade-in">
+                  {error}
+                </div>
+              )}
 
-      {success && (
-        <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg dark:bg-green-900 dark:text-green-300 animate-fade-in">
-          {success}
-        </div>
-      )}
+              {success && (
+                <div className="p-4 bg-green-100 text-green-700 rounded-lg border border-green-200 shadow-md dark:bg-green-900 dark:text-green-300 dark:border-green-800 animate-fade-in">
+                  {success}
+                </div>
+              )}
 
-      {/* ── Save All Settings button ─────────────────────────────────────────── */}
-      <button
-        onClick={saveSettings}
-        disabled={isLoading}
-        className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 animate-fade-in"
-      >
-        {isLoading ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-            Saving...
-          </span>
-        ) : (
-          "Save All Settings"
-        )}
-      </button>
+              {/* Save All Settings button — always visible */}
+              <button
+                onClick={saveSettings}
+                disabled={isLoading}
+                className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 animate-fade-in"
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Saving...
+                  </span>
+                ) : (
+                  "Save All Settings"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
