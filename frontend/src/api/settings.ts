@@ -219,21 +219,22 @@ export function getDefaultDashboardLayout(): DashboardTileConfig[] {
 }
 
 /**
- * Default: the original compact Recent Flights set is visible.
- * All additional logbook categories default to hidden so the tile
- * keeps its current look until the user opts in via Settings.
+ * Default Recent Flights tile columns: Date, Aircraft Type, From, To,
+ * Total Time, PIC, SIC, Night, Full Flight Simulator, SEL and MEL.
+ * All other columns default to hidden so the tile stays compact until
+ * the user opts in via Settings.
  */
 export const DEFAULT_RECENT_FLIGHTS_COLUMNS: RecentFlightsColumns = {
   date: true,
   pilotInCommand: false,
   aircraftType: true,
-  aircraftReg: true,
+  aircraftReg: false,
   departure: true,
   arrival: true,
   totalTime: true,
-  selTime: false,
+  selTime: true,
   sesTime: false,
-  melTime: false,
+  melTime: true,
   mesTime: false,
   helicopterTime: false,
   gyroplaneTime: false,
@@ -247,10 +248,10 @@ export const DEFAULT_RECENT_FLIGHTS_COLUMNS: RecentFlightsColumns = {
   dualTime: false,
   instructorTime: false,
   xcountryTime: false,
-  nightTime: false,
+  nightTime: true,
   actInstrumentTime: false,
   simInstrumentTime: false,
-  fullFlightSimulatorTime: false,
+  fullFlightSimulatorTime: true,
   flightTrainingDeviceTime: false,
   aviationTrainingDeviceTime: false,
   takeoffsDay: false,

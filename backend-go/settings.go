@@ -789,16 +789,19 @@ func recentFlightsColumnsKey(userID int) string {
 }
 
 // recentFlightsColumnsDefaults returns the default set of visible columns
-// for the Recent Flights dashboard tile: the original compact set with the
-// additional logbook categories hidden until the user opts in via Settings.
+// for the Recent Flights dashboard tile: Date, Aircraft Type, From, To,
+// Total Time, PIC, SIC, Night, Full Flight Simulator, SEL and MEL.
+// All other categories are hidden until the user opts in via Settings.
 // Must match DEFAULT_RECENT_FLIGHTS_COLUMNS in frontend/src/api/settings.ts.
 func recentFlightsColumnsDefaults() map[string]bool {
 	defaults := make(map[string]bool)
 
-	// Basic Information — the original compact set
+	// Default visible set
 	trueKeys := []string{
-		"date", "aircraftType", "aircraftReg", "departure", "arrival",
+		"date", "aircraftType", "departure", "arrival",
 		"totalTime", "picTime", "sicTime",
+		"nightTime", "fullFlightSimulatorTime",
+		"selTime", "melTime",
 	}
 	for _, k := range trueKeys {
 		defaults[k] = true
@@ -806,15 +809,14 @@ func recentFlightsColumnsDefaults() map[string]bool {
 
 	// Every other selectable category — hidden by default
 	falseKeys := []string{
-		"pilotInCommand",
-		"selTime", "sesTime", "melTime", "mesTime",
+		"pilotInCommand", "aircraftReg",
+		"sesTime", "mesTime",
 		"helicopterTime", "gyroplaneTime", "poweredLiftTime",
 		"gliderTime", "balloonTime", "airshipTime",
 		"soloTime", "dualTime", "instructorTime",
-		"xcountryTime", "nightTime",
+		"xcountryTime",
 		"actInstrumentTime", "simInstrumentTime",
-		"fullFlightSimulatorTime", "flightTrainingDeviceTime",
-		"aviationTrainingDeviceTime",
+		"flightTrainingDeviceTime", "aviationTrainingDeviceTime",
 		"takeoffsDay", "takeoffsNight", "landingsDay", "landingsNight",
 		"precisionApproaches", "nonPrecisionApproaches", "holdingPatterns",
 		"launchType", "remarks",
