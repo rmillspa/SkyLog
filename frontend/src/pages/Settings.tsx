@@ -1316,7 +1316,7 @@ export default function Settings() {
                   key={key}
                   onClick={() => toggleDashboardSection(key)}
                   aria-pressed={isShown}
-                  className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg border-2 transition-colors text-left ${
+                  className={`flex items-center justify-between gap-2 w-full px-4 py-3 rounded-lg border-2 transition-colors text-left ${
                     isShown
                       ? "bg-blue-50 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400"
                       : "bg-gray-50 border-gray-200 hover:bg-gray-100 dark:bg-zinc-800 dark:border-zinc-400 dark:hover:bg-zinc-700"
@@ -1330,7 +1330,7 @@ export default function Settings() {
                     </div>
                   </div>
                   <span
-                    className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${
+                    className={`text-xs px-2 py-1 rounded-full shrink-0 ${
                       isShown
                         ? "bg-blue-600 text-white"
                         : "bg-gray-300 text-gray-700 dark:bg-zinc-600 dark:text-gray-300"
