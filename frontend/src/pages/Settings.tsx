@@ -1212,7 +1212,7 @@ export default function Settings() {
             <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 border-b border-gray-200 dark:border-zinc-400 pb-2">
               {group.title}
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
               {group.columns.map(({ key, label }) => {
                 const columnKey = key as keyof ColumnVisibility;
                 const isVisible = settings.columnVisibility[columnKey];
@@ -1221,7 +1221,7 @@ export default function Settings() {
                     key={key}
                     onClick={() => toggleColumnVisibility(columnKey)}
                     aria-pressed={isVisible}
-                    className={`flex items-center justify-between gap-2 w-full p-3 rounded-lg border-2 transition-colors text-left ${
+                    className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg border-2 transition-colors text-left ${
                       isVisible
                         ? "bg-blue-50 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400"
                         : "bg-gray-50 border-gray-200 hover:bg-gray-100 dark:bg-zinc-800 dark:border-zinc-400 dark:hover:bg-zinc-700"
@@ -1229,7 +1229,7 @@ export default function Settings() {
                   >
                     <span className="text-sm font-medium text-gray-900 dark:text-white min-w-0">{label}</span>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                      className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${
                         isVisible
                           ? "bg-blue-600 text-white"
                           : "bg-gray-300 text-gray-700 dark:bg-zinc-600 dark:text-gray-300"
@@ -1288,7 +1288,7 @@ export default function Settings() {
             Toggle which sections of the Dashboard are shown.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {([
               { key: "statTiles" as const, label: "Stat Tiles", desc: "Small stat cards at the top", icon: "📊" },
               { key: "recentFlights" as const, label: "Recent Flights", desc: "Your most recent flights table", icon: "✈️" },
@@ -1300,21 +1300,21 @@ export default function Settings() {
                   key={key}
                   onClick={() => toggleDashboardSection(key)}
                   aria-pressed={isShown}
-                  className={`flex items-center justify-between gap-2 w-full p-3 sm:p-4 rounded-lg border-2 transition-colors text-left ${
+                  className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg border-2 transition-colors text-left ${
                     isShown
                       ? "bg-blue-50 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400"
                       : "bg-gray-50 border-gray-200 hover:bg-gray-100 dark:bg-zinc-800 dark:border-zinc-400 dark:hover:bg-zinc-700"
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-xl shrink-0">{icon}</span>
+                    <span className="text-lg shrink-0">{icon}</span>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{label}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{desc}</p>
                     </div>
                   </div>
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                    className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${
                       isShown
                         ? "bg-blue-600 text-white"
                         : "bg-gray-300 text-gray-700 dark:bg-zinc-600 dark:text-gray-300"
@@ -1343,7 +1343,7 @@ export default function Settings() {
                 <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 border-b border-gray-200 dark:border-zinc-400 pb-2">
                   {group.title}
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {group.columns.map(({ key, label }) => {
                     const isOn = recentFlightsColumns[key];
                     return (
@@ -1351,7 +1351,7 @@ export default function Settings() {
                         key={key}
                         onClick={() => toggleRecentFlightsColumn(key)}
                         aria-pressed={isOn}
-                        className={`flex items-center justify-between gap-2 w-full p-3 rounded-lg border-2 transition-colors text-left ${
+                        className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg border-2 transition-colors text-left ${
                           isOn
                             ? "bg-blue-50 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400"
                             : "bg-gray-50 border-gray-200 hover:bg-gray-100 dark:bg-zinc-800 dark:border-zinc-400 dark:hover:bg-zinc-700"
@@ -1359,7 +1359,7 @@ export default function Settings() {
                       >
                         <span className="text-sm font-medium text-gray-900 dark:text-white min-w-0">{label}</span>
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                          className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${
                             isOn
                               ? "bg-blue-600 text-white"
                               : "bg-gray-300 text-gray-700 dark:bg-zinc-600 dark:text-gray-300"
